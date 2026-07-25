@@ -1758,7 +1758,6 @@ export default function App() {
     typeof navigator !== "undefined" && !navigator.onLine,
   );
   const [myWorkOpen, setMyWorkOpen] = useState(false);
-  const [menu2Open, setMenu2Open] = useState(false);
   const [planningOpen, setPlanningOpen] = useState(false);
   const toastRef = useRef();
   const [search, setSearch] = useState("");
@@ -2145,8 +2144,14 @@ export default function App() {
           },
         ]
       : []),
-  ];
-  const menuItems2 = [
+    {
+      icon: I.clock,
+      label: "Planning Sale",
+      fn: () => {
+        setPlanningOpen(true);
+        setMenuOpen(false);
+      },
+    },
     // "Manutenzioni" non e' ancora pronta: visibile solo allo sviluppatore
     ...(user.role === "sviluppatore"
       ? [
@@ -2155,19 +2160,11 @@ export default function App() {
             label: "Manutenzioni",
             fn: () => {
               flash("Sezione in sviluppo");
-              setMenu2Open(false);
+              setMenuOpen(false);
             },
           },
         ]
       : []),
-    {
-      icon: I.clock,
-      label: "Planning Sale",
-      fn: () => {
-        setPlanningOpen(true);
-        setMenu2Open(false);
-      },
-    },
   ];
 
   const pendingPlanned = planned.filter(
@@ -2223,27 +2220,6 @@ export default function App() {
             gap: 10,
           }}
         >
-          {(user.role === "manutentore" ||
-            user.role === "direttore_congressi" ||
-            user.role === "sviluppatore") && (
-            <button
-              onClick={() => setMenu2Open(true)}
-              style={{
-                background: "rgba(255,255,255,.14)",
-                border: "none",
-                color: "#fff",
-                width: 34,
-                height: 34,
-                borderRadius: 9,
-                display: "grid",
-                placeItems: "center",
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-            >
-              {I.menu}
-            </button>
-          )}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {I.hotel}
             <div>
@@ -2559,104 +2535,6 @@ export default function App() {
           flash={flash}
           onClose={() => setNotifOpen(false)}
         />
-      )}
-      {menu2Open && (
-        <>
-          <div
-            onClick={() => setMenu2Open(false)}
-            style={{
-              position: "fixed",
-              inset: 0,
-              zIndex: 60,
-              background: "rgba(0,0,0,.35)",
-            }}
-          />
-          <div
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: 260,
-              zIndex: 70,
-              background: "#fff",
-              boxShadow: "8px 0 30px rgba(0,0,0,.15)",
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
-            <div
-              style={{
-                background: "#0E5C49",
-                padding: "20px 16px 16px",
-                color: "#fff",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                }}
-              >
-                <div style={{ fontWeight: 800, fontSize: 15 }}>Strumenti</div>
-                <button
-                  onClick={() => setMenu2Open(false)}
-                  style={{
-                    background: "rgba(255,255,255,.15)",
-                    border: "none",
-                    color: "#fff",
-                    width: 30,
-                    height: 30,
-                    borderRadius: 8,
-                    display: "grid",
-                    placeItems: "center",
-                    cursor: "pointer",
-                  }}
-                >
-                  {I.x}
-                </button>
-              </div>
-            </div>
-            <div style={{ flex: 1, overflowY: "auto" }}>
-              {menuItems2.map((v, i) => (
-                <button
-                  key={i}
-                  onClick={v.fn}
-                  style={{
-                    width: "100%",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    padding: "13px 20px",
-                    background: "none",
-                    border: "none",
-                    borderBottom: "1px solid #F4F2ED",
-                    cursor: "pointer",
-                    color: "#1B2420",
-                    fontSize: 14,
-                    fontWeight: 500,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 9,
-                      background: "#F4F2ED",
-                      display: "grid",
-                      placeItems: "center",
-                      flexShrink: 0,
-                    }}
-                  >
-                    {v.icon}
-                  </div>
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
       )}
       {/* ===== TAB: SEGNALAZIONI ===== */}
       {tab === "segnalazioni" && (
