@@ -4154,9 +4154,9 @@ function PlannedDetail({
   const canComplete =
     (user.role === "direzione" ||
       user.role === "direttore_congressi" ||
-      user.role === "sviluppatore" ||
       user.role === "reception" ||
       user.role === "sviluppatore" ||
+      user.role === "manutentore" ||
       (isAssigned && user.role !== "governante")) &&
     !done &&
     !waiting;
