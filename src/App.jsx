@@ -538,7 +538,7 @@ const ROLES = {
     icon: "shield",
   },
   responsabile_area: {
-    label: "Responsabile Area",
+    label: "Area",
     desc: "Segnala per la propria zona",
     icon: "list",
   },
@@ -551,7 +551,7 @@ function roleDisplayFor(role, zones) {
     return { label: "Ristorante", icon: "wine" };
   if (zz.some((z) => z.includes("colazioni")))
     return { label: "Colazioni", icon: "coffee" };
-  return { label: "Responsabile Area", icon: "list" };
+  return { label: "Area", icon: "list" };
 }
 const DEF_TEC = [
   { id: "t1", nome: "Pecetti", telefono: "3341196935" },
@@ -1846,7 +1846,7 @@ export default function App() {
               .map((z) => String(z).toLowerCase())
               .some((z) => z.includes("colazioni"))
           ? { label: "Colazioni", icon: "coffee" }
-          : { label: "Responsabile Area", icon: "list" }
+          : { label: "Area", icon: "list" }
       : null;
   const myRoleLabel = areaInfo ? areaInfo.label : ROLES[user?.role]?.label;
   const myRoleIcon = areaInfo ? areaInfo.icon : ROLES[user?.role]?.icon;
@@ -2116,8 +2116,7 @@ export default function App() {
     ...(user.role === "direzione" ||
     user.role === "direttore_congressi" ||
     user.role === "sviluppatore" ||
-    user.role === "reception" ||
-    user.role === "sviluppatore"
+    user.role === "reception"
       ? [
           {
             icon: I.download,
@@ -2670,8 +2669,7 @@ export default function App() {
           {(user.role === "direzione" ||
             user.role === "direttore_congressi" ||
             user.role === "sviluppatore" ||
-            user.role === "reception" ||
-            user.role === "sviluppatore") && (
+            user.role === "reception") && (
             <div
               style={{
                 display: "grid",
@@ -2949,8 +2947,7 @@ export default function App() {
           {(user.role === "direzione" ||
             user.role === "direttore_congressi" ||
             user.role === "sviluppatore" ||
-            user.role === "reception" ||
-            user.role === "sviluppatore") &&
+            user.role === "reception") &&
             cntPlan.pending > 0 && (
               <div
                 style={{
@@ -3134,8 +3131,7 @@ export default function App() {
               {(user.role === "direzione" ||
                 user.role === "direttore_congressi" ||
                 user.role === "sviluppatore" ||
-                user.role === "reception" ||
-                user.role === "sviluppatore") && (
+                user.role === "reception") && (
                 <div style={{ fontSize: 13, marginTop: 6 }}>
                   Usa il pulsante + per crearne uno
                 </div>
@@ -3199,8 +3195,7 @@ export default function App() {
         (user.role === "direzione" ||
           user.role === "direttore_congressi" ||
           user.role === "sviluppatore" ||
-          user.role === "reception" ||
-          user.role === "sviluppatore") && (
+          user.role === "reception") && (
           <NewPlanned
             user={user}
             tec={tec}
@@ -4164,8 +4159,7 @@ function PlannedDetail({
     user.role === "direzione" ||
     user.role === "direttore_congressi" ||
     user.role === "sviluppatore" ||
-    user.role === "reception" ||
-    user.role === "sviluppatore";
+    user.role === "reception";
   const canOrderPiece =
     (user.role === "manutentore" ||
       user.role === "sviluppatore" ||
@@ -4176,8 +4170,7 @@ function PlannedDetail({
     (user.role === "direzione" ||
       user.role === "direttore_congressi" ||
       user.role === "sviluppatore" ||
-      user.role === "reception" ||
-      user.role === "sviluppatore") &&
+      user.role === "reception") &&
     waiting;
   const [showPiece, setShowPiece] = useState(false);
   const [piece, setPiece] = useState(p.pieceName || "");
@@ -5252,31 +5245,25 @@ function Detail({
       user.role === "sviluppatore" ||
       user.role === "direzione" ||
       user.role === "direttore_congressi" ||
-      user.role === "sviluppatore" ||
-      user.role === "reception" ||
-      user.role === "sviluppatore") &&
+      user.role === "reception") &&
     active;
   const canMW =
     user.role === "direzione" ||
     user.role === "direttore_congressi" ||
     user.role === "sviluppatore" ||
-    user.role === "reception" ||
-    user.role === "sviluppatore";
+    user.role === "reception";
   const canCall =
     (user.role === "direzione" ||
       user.role === "direttore_congressi" ||
       user.role === "sviluppatore" ||
-      user.role === "reception" ||
-      user.role === "sviluppatore") &&
+      user.role === "reception") &&
     needT;
   const canReqT =
     (user.role === "manutentore" ||
       user.role === "sviluppatore" ||
       user.role === "direzione" ||
       user.role === "direttore_congressi" ||
-      user.role === "sviluppatore" ||
-      user.role === "reception" ||
-      user.role === "sviluppatore") &&
+      user.role === "reception") &&
     active;
   const canOrdP =
     (user.role === "manutentore" || user.role === "sviluppatore") && active;
@@ -5424,7 +5411,6 @@ function Detail({
         user.role === "direttore_congressi" ||
         user.role === "sviluppatore" ||
         user.role === "reception" ||
-        user.role === "sviluppatore" ||
         ((user.role === "governante" || user.role === "sviluppatore") &&
           it.createdBy === user.name) ||
         ((user.role === "responsabile_area" || user.role === "sviluppatore") &&
@@ -6124,8 +6110,7 @@ function Detail({
         !needT &&
         (user.role === "governante" ||
           user.role === "sviluppatore" ||
-          user.role === "reception" ||
-          user.role === "sviluppatore") && (
+          user.role === "reception") && (
           <div
             style={{
               background: "#FBF0DC",
