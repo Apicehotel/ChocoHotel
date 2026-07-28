@@ -2803,7 +2803,7 @@ export default function App() {
                   onPhoto={setViewer}
                 />
               ))}
-              {filter === "fatte" && filteredDonePlanned.length > 0 && (
+              {filter === "fatte" && vedeInterventi && filteredDonePlanned.length > 0 && (
                 <>
                   <div
                     style={{
