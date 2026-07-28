@@ -2059,6 +2059,18 @@ export default function App() {
         ["att", "Attesa pezzo", cnt.att],
       ];
 
+  // ruoli che gestiscono la struttura (vedono tutto)
+  const isGestione =
+    user.role === "direzione" ||
+    user.role === "direttore_congressi" ||
+    user.role === "reception" ||
+    user.role === "sviluppatore";
+  // ruoli operativi che vedono gli interventi
+  const vedeInterventi =
+    isGestione || user.role === "manutentore";
+  // ruoli che vedono il Planning Sale
+  const vedePlanning = vedeInterventi;
+
   const menuItems = [
     {
       icon: I.refresh,
@@ -2068,7 +2080,7 @@ export default function App() {
         setMenuOpen(false);
       },
     },
-    ...(user.role !== "governante"
+    ...(isGestione
       ? [
           {
             icon: I.msg,
@@ -2144,14 +2156,18 @@ export default function App() {
           },
         ]
       : []),
-    {
-      icon: I.clock,
-      label: "Planning Sale",
-      fn: () => {
-        setPlanningOpen(true);
-        setMenuOpen(false);
-      },
-    },
+    ...(vedePlanning
+      ? [
+          {
+            icon: I.clock,
+            label: "Planning Sale",
+            fn: () => {
+              setPlanningOpen(true);
+              setMenuOpen(false);
+            },
+          },
+        ]
+      : []),
     // "Manutenzioni" non e' ancora pronta: visibile solo allo sviluppatore
     ...(user.role === "sviluppatore"
       ? [
@@ -2284,7 +2300,9 @@ export default function App() {
         >
           {[
             ["segnalazioni", "Segnalazioni", cnt.todo],
-            ["interventi", "Interventi", cntPlan.pending],
+            ...(vedeInterventi
+              ? [["interventi", "Interventi", cntPlan.pending]]
+              : []),
           ].map(([k, l, n]) => (
             <button
               key={k}
