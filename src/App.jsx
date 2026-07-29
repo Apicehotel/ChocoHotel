@@ -6991,7 +6991,13 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
     if (missing.length === 0) {
       setSyncMsg({ ok: true, m: "Già tutti presenti, nessuno aggiunto." });
     } else {
-      saveU([...users, ...missing]);
+      // scrittura mirata: aggiunge solo gli utenti mancanti, senza toccare
+      // gli altri (stesso motivo di add()/rm(): evita di sovrascrivere PIN
+      // cambiati nel frattempo con la lista "vecchia" caricata all'apertura)
+      missing.forEach((m) => DB.addUser(m));
+      const u = [...users, ...missing];
+      setUsers(u);
+      onSaveUsers && onSaveUsers(u);
       setSyncMsg({
         ok: true,
         m: "Aggiunti: " + missing.map((m) => m.name).join(", "),
