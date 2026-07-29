@@ -575,6 +575,9 @@ const DEF_USERS = [
   { id: "u5", name: "Patricio", role: "manutentore", pin: "0000" },
   { id: "g1", name: "Giulia", role: "governante", pin: "0000" },
   { id: "r1", name: "Reception", role: "reception", pin: "0000" },
+  { id: "pn1", name: "Michele C.", role: "portiere_notturno", pin: "0000" },
+  { id: "pn2", name: "Marco", role: "portiere_notturno", pin: "0000" },
+  { id: "pn3", name: "Amin", role: "portiere_notturno", pin: "0000" },
 ];
 const ADMIN_PIN_DEFAULT = "0000";
 
