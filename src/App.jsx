@@ -6693,9 +6693,12 @@ function Login({ onLogin }) {
           setAdminPin(p);
           ST.set("adminpin", p);
         }}
-        onSaveUsers={async (u) => {
+        onSaveUsers={(u) => {
+          // AdminPanel ha gia' scritto sul database (in modo mirato per
+          // aggiunte/rimozioni, o con sostituzione completa per import/backup
+          // dove e' l'operazione voluta): qui serve solo aggiornare la copia
+          // locale, senza riscrivere di nuovo tutta la tabella.
           setUsers(u);
-          await DB.saveUsers(u);
         }}
         onBack={() => setStep("login")}
       />
@@ -6953,8 +6956,13 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
         : null;
     const nu = { id: uid(), name: newName.trim(), role: newRole, pin: newPin };
     if (zonesArr && zonesArr.length) nu.zones = zonesArr;
+    // scrittura mirata: aggiunge solo questo utente, non riscrive tutta la
+    // tabella (altrimenti si rischia di sovrascrivere PIN cambiati da altri
+    // nel frattempo con la lista "vecchia" caricata all'apertura del pannello)
+    DB.addUser(nu);
     const u = [...users, nu];
-    saveU(u);
+    setUsers(u);
+    onSaveUsers && onSaveUsers(u);
     setShowForm(false);
     setNewName("");
     setNewPin("");
@@ -6963,7 +6971,13 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
     setDevPin("");
     setDevErr("");
   };
-  const rm = (id) => saveU(users.filter((u) => u.id !== id));
+  const rm = (id) => {
+    // scrittura mirata: elimina solo questo utente, stesso motivo di add()
+    DB.deleteUser(id);
+    const u = users.filter((x) => x.id !== id);
+    setUsers(u);
+    onSaveUsers && onSaveUsers(u);
+  };
   const [syncMsg, setSyncMsg] = useState(null);
   const syncDefaults = () => {
     const missing = DEF_USERS.filter(

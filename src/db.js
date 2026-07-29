@@ -226,6 +226,25 @@ export const DB = {
       if (error) console.error(error);
     }
   },
+  // Inserisce un solo utente, senza toccare gli altri (evita di sovrascrivere
+  // PIN cambiati nel frattempo da altri, come faceva saveUsers con una lista intera).
+  async addUser(u) {
+    const row = {
+      id: u.id,
+      nome: u.name,
+      ruolo: u.role,
+      pin: u.pin,
+      zone_consentite: u.zones || null,
+      deve_cambiare_pin: u.mustChangePin || false,
+    };
+    const { error } = await supabase.from("utenti").insert(row);
+    if (error) console.error(error);
+  },
+  // Elimina un solo utente per id, senza toccare gli altri.
+  async deleteUser(id) {
+    const { error } = await supabase.from("utenti").delete().eq("id", id);
+    if (error) console.error(error);
+  },
   async updateUserPin(name, role, newPin) {
     const { error } = await supabase
       .from("utenti")
