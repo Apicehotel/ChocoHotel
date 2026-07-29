@@ -517,6 +517,11 @@ const ROLES = {
     desc: "Segnala dalle camere",
     icon: "list",
   },
+  portiere_notturno: {
+    label: "Portiere Notturno",
+    desc: "Segnala durante il turno di notte",
+    icon: "list",
+  },
   manutentore: {
     label: "Manutentore",
     desc: "Esegue gli interventi",
@@ -4048,7 +4053,9 @@ function PlannedDetail({
       user.role === "reception" ||
       user.role === "sviluppatore" ||
       user.role === "manutentore" ||
-      (isAssigned && user.role !== "governante")) &&
+      (isAssigned &&
+        user.role !== "governante" &&
+        user.role !== "portiere_notturno")) &&
     !done &&
     !waiting;
   const canDelete =
@@ -4059,7 +4066,9 @@ function PlannedDetail({
   const canOrderPiece =
     (user.role === "manutentore" ||
       user.role === "sviluppatore" ||
-      (isAssigned && user.role !== "governante")) &&
+      (isAssigned &&
+        user.role !== "governante" &&
+        user.role !== "portiere_notturno")) &&
     !done &&
     !waiting;
   const canManageWait =
@@ -5309,6 +5318,8 @@ function Detail({
         user.role === "reception" ||
         ((user.role === "governante" || user.role === "sviluppatore") &&
           it.createdBy === user.name) ||
+        ((user.role === "portiere_notturno" || user.role === "sviluppatore") &&
+          it.createdBy === user.name) ||
         ((user.role === "responsabile_area" || user.role === "sviluppatore") &&
           it.createdBy === user.name)) && (
         <button
@@ -6005,6 +6016,7 @@ function Detail({
         !wait &&
         !needT &&
         (user.role === "governante" ||
+          user.role === "portiere_notturno" ||
           user.role === "sviluppatore" ||
           user.role === "reception") && (
           <div
