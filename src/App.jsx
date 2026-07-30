@@ -6057,10 +6057,9 @@ function Detail({
                     fontSize: 13,
                     padding: "11px 6px",
                     opacity: askingTecnico ? 0.6 : 1,
-                    marginBottom: 10,
                   }}
                 >
-                  {I.msg} Chiedi di contattare un tecnico
+                  {I.msg} Contatta tecnico
                 </button>
               )}
               {canReqT &&
