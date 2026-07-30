@@ -2024,7 +2024,9 @@ export default function App() {
     done: planned.filter((p) => p.status === "done").length,
   };
   const cnt = {
-    todo: items.filter((i) => i.status === "todo").length,
+    todo: items.filter(
+      (i) => i.status === "todo" && !i.tecnicoAskedBy,
+    ).length,
     tec: items.filter(
       (i) =>
         i.status === "tecnico" ||
@@ -2032,13 +2034,15 @@ export default function App() {
     ).length,
     att: items.filter((i) => i.status === "waiting").length,
     done: items.filter((i) => i.status === "done").length + cntPlan.done,
-    alta: items.filter((i) => i.status === "todo" && i.urgency === "alta")
-      .length,
+    alta: items.filter(
+      (i) =>
+        i.status === "todo" && i.urgency === "alta" && !i.tecnicoAskedBy,
+    ).length,
   };
   const fil = items.filter((i) => {
     const matchFilter =
       filter === "aperte"
-        ? i.status === "todo"
+        ? i.status === "todo" && !i.tecnicoAskedBy
         : filter === "att"
           ? i.status === "waiting"
           : filter === "tec"
