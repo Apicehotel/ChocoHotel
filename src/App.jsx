@@ -5242,8 +5242,7 @@ function Detail({
       user.role === "reception") &&
     needT;
   const canReqT =
-    (user.role === "manutentore" ||
-      user.role === "sviluppatore" ||
+    (user.role === "sviluppatore" ||
       user.role === "direzione" ||
       user.role === "direttore_congressi" ||
       user.role === "reception") &&
