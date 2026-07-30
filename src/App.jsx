@@ -5261,7 +5261,8 @@ function Detail({
     active;
   // Il manutentore non chiama piu' un tecnico direttamente: puo' chiedere a
   // chi puo' farlo (reception/direzione/direttore congressi) di occuparsene.
-  const canAskTecnico = user.role === "manutentore" && active;
+  const canAskTecnico =
+    user.role === "manutentore" && active && !it.tecnicoAskedBy;
   const [askingTecnico, setAskingTecnico] = useState(false);
   const askTecnico = async () => {
     setAskingTecnico(true);
