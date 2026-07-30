@@ -5247,6 +5247,35 @@ function Detail({
       user.role === "direttore_congressi" ||
       user.role === "reception") &&
     active;
+  // Il manutentore non chiama piu' un tecnico direttamente: puo' chiedere a
+  // chi puo' farlo (reception/direzione/direttore congressi) di occuparsene.
+  const canAskTecnico = user.role === "manutentore" && active;
+  const [askingTecnico, setAskingTecnico] = useState(false);
+  const askTecnico = async () => {
+    setAskingTecnico(true);
+    try {
+      await fetch(
+        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-push",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roles: ["reception", "direzione", "direttore_congressi"],
+            title: "🔔 Serve un tecnico",
+            body:
+              user.name +
+              " chiede di contattare un tecnico — Camera " +
+              it.room +
+              (CAT[it.category] ? " · " + CAT[it.category].label : ""),
+          }),
+        },
+      );
+      onFlash("Richiesta inviata a reception/direzione ✓");
+    } catch {
+      onFlash("Errore nell'invio della richiesta", false);
+    }
+    setAskingTecnico(false);
+  };
   const canOrdP =
     (user.role === "manutentore" || user.role === "sviluppatore") && active;
   const pick = async (e) => {
@@ -5978,6 +6007,22 @@ function Detail({
                     </div>
                   </div>
                 ))}
+              {canAskTecnico && !showW && (
+                <button
+                  onClick={askTecnico}
+                  disabled={askingTecnico}
+                  style={{
+                    ...ctaSt,
+                    background: "#D97706",
+                    fontSize: 13,
+                    padding: "11px 6px",
+                    opacity: askingTecnico ? 0.6 : 1,
+                    marginBottom: 10,
+                  }}
+                >
+                  {I.msg} Chiedi di contattare un tecnico
+                </button>
+              )}
               {canReqT &&
                 !showW &&
                 (!showT ? (
