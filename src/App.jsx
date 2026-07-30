@@ -2025,7 +2025,11 @@ export default function App() {
   };
   const cnt = {
     todo: items.filter((i) => i.status === "todo").length,
-    tec: items.filter((i) => i.status === "tecnico").length,
+    tec: items.filter(
+      (i) =>
+        i.status === "tecnico" ||
+        (i.tecnicoAskedBy && i.status === "todo"),
+    ).length,
     att: items.filter((i) => i.status === "waiting").length,
     done: items.filter((i) => i.status === "done").length + cntPlan.done,
     alta: items.filter((i) => i.status === "todo" && i.urgency === "alta")
@@ -2038,7 +2042,8 @@ export default function App() {
         : filter === "att"
           ? i.status === "waiting"
           : filter === "tec"
-            ? i.status === "tecnico"
+            ? i.status === "tecnico" ||
+              (i.tecnicoAskedBy && i.status === "todo")
             : filter === "fatte"
               ? i.status === "done"
               : true;
@@ -3333,12 +3338,15 @@ function compareRoom(a, b) {
 }
 function Card({ it, onOpen, onPhoto }) {
   const u = URG[it.urgency] || URG.media;
-  const st = {
-    todo: { l: "Da fare", bg: "#F1E4CC", fg: "#7a5212" },
-    done: { l: "Completata", bg: "#E6F2EB", fg: "#2E7D5B" },
-    waiting: { l: "Attesa pezzo", bg: "#EDE9FE", fg: "#7C3AED" },
-    tecnico: { l: "Tecnico", bg: "#FEF3C7", fg: "#92400E" },
-  }[it.status] || { l: "Da fare", bg: "#F1E4CC", fg: "#7a5212" };
+  const st = it.status === "tecnico"
+    ? { l: "Tecnico contattato", bg: "#FEF3C7", fg: "#92400E" }
+    : it.tecnicoAskedBy && it.status === "todo"
+      ? { l: "Contattare tecnico", bg: "#FEF3C7", fg: "#92400E" }
+      : {
+          todo: { l: "Da fare", bg: "#F1E4CC", fg: "#7a5212" },
+          done: { l: "Completata", bg: "#E6F2EB", fg: "#2E7D5B" },
+          waiting: { l: "Attesa pezzo", bg: "#EDE9FE", fg: "#7C3AED" },
+        }[it.status] || { l: "Da fare", bg: "#F1E4CC", fg: "#7a5212" };
   return (
     <div
       onClick={onOpen}
@@ -5254,6 +5262,11 @@ function Detail({
   const askTecnico = async () => {
     setAskingTecnico(true);
     try {
+      onSave({
+        ...it,
+        tecnicoAskedBy: user.name,
+        tecnicoAskedAt: Date.now(),
+      });
       await fetch(
         "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-push",
         {
@@ -5508,12 +5521,34 @@ function Detail({
           )}
         </>,
       )}{" "}
+      {it.tecnicoAskedBy &&
+        it.status === "todo" &&
+        blk(
+          "#FFFBEB",
+          "#FCD34D",
+          <>
+            {dlbl("Contattare tecnico", "#92400E")}
+            <div
+              style={{
+                fontSize: 13,
+                color: "#78350F",
+                marginBottom: 6,
+                lineHeight: 1.4,
+              }}
+            >
+              {it.tecnicoAskedBy} chiede di contattare un tecnico.
+            </div>
+            <div style={{ fontSize: 11, color: "#92400E" }}>
+              {fmt(it.tecnicoAskedAt)}
+            </div>
+          </>,
+        )}
       {needT &&
         blk(
           "#FFFBEB",
           "#FCD34D",
           <>
-            {dlbl("Tecnico richiesto", "#92400E")}
+            {dlbl("Tecnico contattato", "#92400E")}
             <div
               style={{
                 fontSize: 15,

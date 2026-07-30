@@ -46,6 +46,10 @@ function itemFromRow(r) {
       ? new Date(r.tecnico_chiamato_il).getTime()
       : null,
     tecnicoCompleted: r.tecnico_completato,
+    tecnicoAskedBy: r.tecnico_sollecitato_da,
+    tecnicoAskedAt: r.tecnico_sollecitato_il
+      ? new Date(r.tecnico_sollecitato_il).getTime()
+      : null,
   };
 }
 function itemToRow(it) {
@@ -91,6 +95,10 @@ function itemToRow(it) {
       ? new Date(it.tecnicoCalledAt).toISOString()
       : null,
     tecnico_completato: it.tecnicoCompleted || false,
+    tecnico_sollecitato_da: it.tecnicoAskedBy || null,
+    tecnico_sollecitato_il: it.tecnicoAskedAt
+      ? new Date(it.tecnicoAskedAt).toISOString()
+      : null,
   };
 }
 
