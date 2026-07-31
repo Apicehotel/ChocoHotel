@@ -1,12 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-// ATTENZIONE — PLACEHOLDER: Chocohotel non ha ancora un proprio progetto
-// Supabase. Questi valori sono intenzionalmente finti (non puntano a nessun
-// progetto reale) per evitare che l'app scriva per errore nel database di
-// produzione di Hotel Giò. Sostituire con URL e chiave del progetto Supabase
-// dedicato a Chocohotel non appena verra' creato.
-const SUPABASE_URL = "https://CHOCOHOTEL-DA-CONFIGURARE.supabase.co";
-const SUPABASE_KEY = "chocohotel-chiave-da-configurare";
+const SUPABASE_URL = "https://ooqlfldcrnkudhgjnied.supabase.co";
+const SUPABASE_KEY = "sb_publishable_Oiu7IOhuUd6YPEDmmSa7zA_ngNuiSlX";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
