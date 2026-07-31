@@ -1772,6 +1772,9 @@ export default function App() {
     ST.set("pin_bug_notice_v1_seen", true);
     setPinBugNotice(false);
   };
+  // Conferma prima di passare all'altra struttura: window.location.href
+  // e' impostato solo dopo che l'utente conferma nel pannello.
+  const [switchConfirm, setSwitchConfirm] = useState(null);
   const [manualOpen, setManualOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -2122,8 +2125,8 @@ export default function App() {
             icon: I.hotel,
             label: "Vai a Hotel Giò",
             fn: () => {
-              window.location.href =
-                "https://hotelgio.vercel.app";
+              setSwitchConfirm("https://hotelgio.vercel.app");
+              setMenuOpen(false);
             },
           },
         ]
@@ -3273,6 +3276,68 @@ export default function App() {
               }}
             >
               Va tutto bene, chiudi
+            </button>
+          </div>
+        </div>
+      )}
+      {switchConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(27,36,32,.45)",
+            zIndex: 90,
+            display: "flex",
+            alignItems: "flex-end",
+            justifyContent: "center",
+          }}
+          onClick={() => setSwitchConfirm(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#fff",
+              width: "100%",
+              maxWidth: 480,
+              borderRadius: "18px 18px 0 0",
+              padding: "20px 20px calc(env(safe-area-inset-bottom, 0px) + 20px)",
+            }}
+          >
+            <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
+              {I.hotel} Cambio struttura
+            </div>
+            <div
+              style={{
+                fontSize: 13.5,
+                lineHeight: 1.5,
+                color: "#3a4340",
+                marginBottom: 16,
+              }}
+            >
+              Stai per uscire da questa app e passare all'altra struttura.
+              Serve il tuo PIN solo se non sei già collegato.
+            </div>
+            <button
+              onClick={() => {
+                window.location.href = switchConfirm;
+              }}
+              style={{ ...ctaSt, marginBottom: 8 }}
+            >
+              Continua
+            </button>
+            <button
+              onClick={() => setSwitchConfirm(null)}
+              style={{
+                width: "100%",
+                background: "none",
+                border: "none",
+                color: "#5C645E",
+                fontSize: 13,
+                padding: 8,
+                cursor: "pointer",
+              }}
+            >
+              Annulla
             </button>
           </div>
         </div>
