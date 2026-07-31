@@ -562,6 +562,7 @@ function roleDisplayFor(role, zones) {
 const DEF_TEC = [];
 const DEF_USERS = [
   { id: "d1", name: "Simona", role: "direzione", pin: "0000" },
+  { id: "d2", name: "Michele", role: "direzione", pin: "0000" },
   { id: "dv1", name: "Randagio", role: "sviluppatore", pin: "0000" },
   { id: "r1", name: "Reception", role: "reception", pin: "0000" },
   // Manutentori: Mauro fisso, gli altri tre in prestito da Hotel Giò
@@ -2113,7 +2114,7 @@ export default function App() {
     // Switch tra le due strutture: solo per chi lavora stabilmente su
     // entrambe (3 manutentori in prestito + 3 portieri notturni di Hotel Giò).
     // Stesso PIN in entrambi i sistemi, un tocco per cambiare app.
-    ...(["Domenico", "Aly", "Patricio", "Michele C.", "Marco", "Amin"].includes(
+    ...(["Domenico", "Aly", "Patricio", "Michele C.", "Marco", "Amin", "Michele"].includes(
       user.name,
     )
       ? [
