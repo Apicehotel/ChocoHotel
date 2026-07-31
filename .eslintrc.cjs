@@ -1,0 +1,23 @@
+module.exports = {
+  root: true,
+  env: { browser: true, es2022: true },
+  parserOptions: { ecmaVersion: 2022, sourceType: 'module', ecmaFeatures: { jsx: true } },
+  settings: { react: { version: '18.2' } },
+  plugins: ['react', 'react-hooks'],
+  rules: {
+    'no-undef': 'error','no-use-before-define': ['error', { functions: false, classes: false, variables: true }],
+    'no-unused-vars': ['warn', { args: 'none', varsIgnorePattern: '^_' }],
+    'no-dupe-keys': 'error',
+    'no-dupe-args': 'error',
+    'no-duplicate-case': 'error',
+    'no-unreachable': 'error',
+    'no-const-assign': 'error',
+    'no-self-compare': 'error',
+    'no-cond-assign': 'error',
+    'no-constant-condition': 'error',
+    'no-empty': 'warn',
+    'react/jsx-no-undef': 'error','react/jsx-uses-vars':'error','react/jsx-uses-react':'error',
+    'react/jsx-key': 'warn',
+    'react-hooks/rules-of-hooks': 'error',
+  },
+};
