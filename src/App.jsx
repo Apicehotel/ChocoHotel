@@ -6672,7 +6672,7 @@ function Login({ onLogin }) {
         justifyContent: "center",
         padding: 20,
         background:
-          "radial-gradient(110% 80% at 50% -10%, #1a7a5f 0%, #0e5c49 35%, #083d31 70%, #052821 100%)",
+          "radial-gradient(110% 80% at 50% -10%, #A01E1E 0%, #640A0A 35%, #4A0808 70%, #300505 100%)",
         fontFamily: "ui-sans-serif,system-ui,sans-serif",
         overflow: "hidden",
       }}
@@ -6878,7 +6878,7 @@ function Login({ onLogin }) {
         justifyContent: "center",
         padding: 20,
         background:
-          "radial-gradient(110% 80% at 50% -10%, #1a7a5f 0%, #0e5c49 35%, #083d31 70%, #052821 100%)",
+          "radial-gradient(110% 80% at 50% -10%, #A01E1E 0%, #640A0A 35%, #4A0808 70%, #300505 100%)",
         fontFamily: "ui-sans-serif,system-ui,sans-serif",
         overflow: "hidden",
       }}
