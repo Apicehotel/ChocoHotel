@@ -2110,6 +2110,23 @@ export default function App() {
         setMenuOpen(false);
       },
     },
+    // Switch tra le due strutture: solo per chi lavora stabilmente su
+    // entrambe (3 manutentori in prestito + 3 portieri notturni di Hotel Giò).
+    // Stesso PIN in entrambi i sistemi, un tocco per cambiare app.
+    ...(["Domenico", "Aly", "Patricio", "Michele C.", "Marco", "Amin"].includes(
+      user.name,
+    )
+      ? [
+          {
+            icon: I.hotel,
+            label: "Vai a Hotel Giò",
+            fn: () => {
+              window.location.href =
+                "https://hotelgio-git-main-apicehotel.vercel.app";
+            },
+          },
+        ]
+      : []),
     ...(isGestione
       ? [
           {
