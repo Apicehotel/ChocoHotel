@@ -2119,7 +2119,7 @@ export default function App() {
             label: "Vai a Chocohotel",
             fn: () => {
               window.location.href =
-                "https://chocohotel-git-main-apicehotel.vercel.app";
+                "https://chocohotel.vercel.app";
             },
           },
         ]
