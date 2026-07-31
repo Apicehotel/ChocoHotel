@@ -2110,7 +2110,7 @@ export default function App() {
     // Switch tra le due strutture: solo per chi lavora stabilmente su
     // entrambe (3 manutentori in prestito + 3 portieri notturni di Hotel Giò).
     // Stesso PIN in entrambi i sistemi, un tocco per cambiare app.
-    ...(["Domenico", "Aly", "Patricio", "Michele C.", "Marco", "Amin"].includes(
+    ...(["Domenico", "Aly", "Patricio", "Michele C.", "Marco", "Amin", "Michele"].includes(
       user.name,
     )
       ? [
