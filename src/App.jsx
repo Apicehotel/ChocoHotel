@@ -2123,7 +2123,7 @@ export default function App() {
             label: "Vai a Hotel Giò",
             fn: () => {
               window.location.href =
-                "https://hotelgio-git-main-apicehotel.vercel.app";
+                "https://hotelgio.vercel.app";
             },
           },
         ]
