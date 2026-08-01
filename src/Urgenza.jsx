@@ -9,7 +9,8 @@
 // persistente (requireInteraction) e con vibrazione piu' insistente dal
 // service worker — vedi sw.js.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { DB } from "./db.js";
 
 // Sirena continua e assordante: onda dentata che sale/scende senza pause,
 // doppio oscillatore leggermente stonato per renderla piu' dura.
@@ -81,6 +82,18 @@ export function UrgenzaSendButton({ user, onSend, onFlash }) {
   const [open, setOpen] = useState(false);
   const [nota, setNota] = useState("");
   const [busy, setBusy] = useState(false);
+  const [presenza, setPresenza] = useState(null); // null = non ancora caricata
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    DB.loadManutentoriPresenza().then((rows) => {
+      if (!cancelled) setPresenza(rows);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const invia = async () => {
     const testo = nota.trim();
@@ -140,6 +153,61 @@ export function UrgenzaSendButton({ user, onSend, onFlash }) {
               Va subito a tutti i manutentori attivi, con suono forte e
               notifica che resta finché non viene gestita.
             </div>
+            {presenza && presenza.length > 0 && (
+              <div
+                style={{
+                  background: "#F4F6F5",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  marginBottom: 12,
+                  fontSize: 12.5,
+                }}
+              >
+                <div
+                  style={{
+                    fontWeight: 700,
+                    color: "#5C645E",
+                    marginBottom: 6,
+                    fontSize: 11,
+                    textTransform: "uppercase",
+                    letterSpacing: ".04em",
+                  }}
+                >
+                  In struttura ora
+                </div>
+                {presenza.filter((m) => m.in_struttura).length === 0 ? (
+                  <div style={{ color: "#8A9490" }}>
+                    Nessuno risulta in struttura al momento — la richiesta
+                    arriva comunque a tutti.
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                    }}
+                  >
+                    {presenza
+                      .filter((m) => m.in_struttura)
+                      .map((m) => (
+                        <span
+                          key={m.nome}
+                          style={{
+                            background: "#E3F1EE",
+                            color: "#0A4A40",
+                            padding: "3px 9px",
+                            borderRadius: 20,
+                            fontWeight: 600,
+                          }}
+                        >
+                          🟢 {m.nome}
+                        </span>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
             <textarea
               value={nota}
               maxLength={255}
@@ -284,4 +352,114 @@ export function UrgenzaBanner({ urgenze, user, onTake }) {
       <style>{`@keyframes urgPulse{0%,100%{box-shadow:0 0 0 0 rgba(200,30,30,.6)}50%{box-shadow:0 0 0 10px rgba(200,30,30,0)}}`}</style>
     </div>
   );
+}
+
+// ── Check-in manuale "Sono in struttura" (solo manutentore) ─────────────────
+// E' la base sempre affidabile: funziona anche ad app chiusa perche' e'
+// solo un flag nel DB. Il rilevamento GPS (vedi useAutoCheckInGPS in App.jsx)
+// puo' accendere questo stato in automatico, ma non lo spegne mai se e'
+// stato acceso a mano: il manuale ha sempre l'ultima parola.
+export function InStrutturaToggle({ user }) {
+  const [dentro, setDentro] = useState(null); // null = non ancora caricato
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    DB.loadMiaPresenza(user.name).then((r) => {
+      if (!cancelled) setDentro(!!r?.in_struttura);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user.name]);
+
+  if (dentro === null) return null;
+
+  const toggle = async () => {
+    setBusy(true);
+    const nuovo = !dentro;
+    await DB.setInStrutturaManuale(user.name, nuovo);
+    setDentro(nuovo);
+    setBusy(false);
+  };
+
+  return (
+    <button
+      onClick={toggle}
+      disabled={busy}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        margin: "8px 14px 0",
+        padding: "8px 14px",
+        borderRadius: 20,
+        border: "1px solid #E4E4DE",
+        background: dentro ? "#E3F1EE" : "#fff",
+        color: dentro ? "#0A4A40" : "#5C645E",
+        fontSize: 12.5,
+        fontWeight: 700,
+        cursor: busy ? "default" : "pointer",
+        opacity: busy ? 0.7 : 1,
+      }}
+    >
+      {dentro ? "🟢 Sono in struttura" : "⚪️ Non sono in struttura"}
+    </button>
+  );
+}
+
+// ── Rilevamento GPS automatico (solo manutentore) ───────────────────────────
+// Chiede il permesso di posizione una sola volta (il browser lo ricorda da
+// solo). Se l'app e' aperta ed entro 200m da Hotel Giò, segna "in struttura"
+// in automatico — ma solo se lo stato attuale non e' stato impostato a mano
+// (vedi autoSetInStrutturaGPS in db.js). Non fa nulla se il permesso viene
+// negato o se il browser non supporta la geolocalizzazione.
+const HOTEL_LAT = 43.1125739;
+const HOTEL_LNG = 12.3773999;
+const RAGGIO_METRI = 200;
+
+function distanzaMetri(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+export function useAutoCheckInGPS(user) {
+  useEffect(() => {
+    if (!user || user.role !== "manutentore") return;
+    if (!("geolocation" in navigator)) return;
+    let cancelled = false;
+
+    const controlla = () => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (cancelled) return;
+          const dist = distanzaMetri(
+            pos.coords.latitude,
+            pos.coords.longitude,
+            HOTEL_LAT,
+            HOTEL_LNG,
+          );
+          DB.autoSetInStrutturaGPS(user.name, dist <= RAGGIO_METRI);
+        },
+        () => {
+          // Permesso negato o posizione non disponibile: ignora in
+          // silenzio, resta valido solo il check-in manuale.
+        },
+        { enableHighAccuracy: false, maximumAge: 60000, timeout: 8000 },
+      );
+    };
+
+    controlla();
+    const id = setInterval(controlla, 2 * 60 * 1000); // ogni 2 minuti
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [user]);
 }

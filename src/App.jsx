@@ -7,6 +7,8 @@ import {
   canInviaUrgenza,
   UrgenzaSendButton,
   UrgenzaBanner,
+  InStrutturaToggle,
+  useAutoCheckInGPS,
 } from "./Urgenza";
 
 const HOTEL_LOGO =
@@ -1754,6 +1756,7 @@ function PlanningSale({ user, onClose, onFlash }) {
 
 export default function App() {
   const [user, setUser] = useState(() => ST.get("ses"));
+  useAutoCheckInGPS(user);
   const [items, setItems] = useState([]);
   const [planned, setPlanned] = useState([]);
   const [tec, setTec] = useState([]);
@@ -2440,6 +2443,7 @@ export default function App() {
       </header>
       {user.role === "manutentore" && (
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
+          <InStrutturaToggle user={user} />
           <UrgenzaBanner
             urgenze={urgenze}
             user={user}

@@ -351,6 +351,70 @@ export const DB = {
     if (error) console.error(error);
     return !error;
   },
+
+  // ── Presenza in struttura (check-in manuale + rilevamento GPS) ────────────
+  // in_struttura_via distingue chi l'ha impostato:
+  // 'manuale' = il manutentore ha toccato il pulsante, ha sempre la
+  //             precedenza e il GPS non lo tocca finche' non lo cambia lui;
+  // 'gps'     = rilevato in automatico, il GPS puo' aggiornarlo liberamente.
+  async loadMiaPresenza(nome) {
+    const { data, error } = await supabase
+      .from("utenti")
+      .select("in_struttura, in_struttura_dal, in_struttura_via")
+      .eq("nome", nome)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    return data;
+  },
+  async setInStrutturaManuale(nome, valore) {
+    const { error } = await supabase
+      .from("utenti")
+      .update({
+        in_struttura: valore,
+        in_struttura_dal: new Date().toISOString(),
+        in_struttura_via: "manuale",
+      })
+      .eq("nome", nome);
+    if (error) console.error(error);
+    return !error;
+  },
+  async autoSetInStrutturaGPS(nome, dentroRaggio) {
+    // Non sovrascrive mai un check-in fatto a mano: lo aggiorna solo se lo
+    // stato attuale non e' 'manuale' (cioe' non ancora impostato, o gia'
+    // impostato in automatico da un rilevamento GPS precedente).
+    const { data } = await supabase
+      .from("utenti")
+      .select("in_struttura_via")
+      .eq("nome", nome)
+      .limit(1)
+      .maybeSingle();
+    if (data?.in_struttura_via === "manuale") return;
+    const { error } = await supabase
+      .from("utenti")
+      .update({
+        in_struttura: dentroRaggio,
+        in_struttura_dal: new Date().toISOString(),
+        in_struttura_via: "gps",
+      })
+      .eq("nome", nome);
+    if (error) console.error(error);
+  },
+  async loadManutentoriPresenza() {
+    const { data, error } = await supabase
+      .from("utenti")
+      .select("nome, in_struttura, in_struttura_dal, in_struttura_via")
+      .eq("ruolo", "manutentore")
+      .order("nome");
+    if (error) {
+      console.error(error);
+      return [];
+    }
+    return data;
+  },
 };
 
 // UID per nuovi record (Supabase genera comunque il suo, ma serve per la UI)
