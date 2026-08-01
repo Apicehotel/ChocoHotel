@@ -1819,7 +1819,11 @@ export default function App() {
   const FILTERS =
     user?.role === "responsabile_area"
       ? ["aperte", "fatte", "tutte"]
-      : user?.role === "manutentore"
+      : user?.role === "manutentore" ||
+          user?.role === "direzione" ||
+          user?.role === "direttore_congressi" ||
+          user?.role === "reception" ||
+          user?.role === "sviluppatore"
         ? ["aperte", "tec", "att", "urg", "fatte", "tutte"]
         : ["aperte", "tec", "att", "fatte", "tutte"];
   const swipeRef = useRef(null);
@@ -2158,7 +2162,10 @@ export default function App() {
   ).length;
   const filterRow1 = isAreaRole
     ? [["aperte", "Da fare", cnt.todo]]
-    : user.role === "manutentore"
+    : user.role === "manutentore" ||
+        user.role === "direzione" ||
+        user.role === "direttore_congressi" ||
+        user.role === "reception"
       ? [
           ["aperte", "Da fare", cnt.todo],
           ["tec", "Tecnico", cnt.tec],
@@ -2478,11 +2485,13 @@ export default function App() {
       {user.role === "manutentore" && (
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <InStrutturaToggle user={user} />
-          <UrgenzaBanner
-            urgenze={urgenze}
-            user={user}
-            onTake={prendiUrgenza}
-          />
+          {!(tab === "segnalazioni" && filter === "urg") && (
+            <UrgenzaBanner
+              urgenze={urgenze}
+              user={user}
+              onTake={prendiUrgenza}
+            />
+          )}
         </div>
       )}
       {canInviaUrgenza(user.role) && (
@@ -3009,7 +3018,11 @@ export default function App() {
           </>
           )}
           {filter === "urg" && (
-            <UrgenzeLog urgenze={urgenze} onTake={prendiUrgenza} />
+            <UrgenzeLog
+              urgenze={urgenze}
+              onTake={prendiUrgenza}
+              canTake={user.role === "manutentore"}
+            />
           )}
         </main>
       )}

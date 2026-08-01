@@ -408,7 +408,7 @@ export function UrgenzaBanner({ urgenze, user, onTake }) {
 // carico, resta consultabile finche' la pulizia automatica a 72h non la
 // toglie dal DB). Complementa il banner in cima, che invece serve per
 // l'allarme immediato con suono.
-export function UrgenzeLog({ urgenze, onTake }) {
+export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
   if (!urgenze || urgenze.length === 0) {
     return (
       <div
@@ -495,7 +495,7 @@ export function UrgenzeLog({ urgenze, onTake }) {
                     })
                   : ""}
               </div>
-            ) : (
+            ) : canTake ? (
               <button
                 onClick={() => onTake(u.id)}
                 style={{
@@ -512,6 +512,10 @@ export function UrgenzeLog({ urgenze, onTake }) {
               >
                 Preso in carico
               </button>
+            ) : (
+              <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>
+                In attesa che un manutentore la prenda in carico
+              </div>
             )}
           </div>
         );
