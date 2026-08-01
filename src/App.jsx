@@ -9,6 +9,7 @@ import {
   UrgenzaBanner,
   InStrutturaToggle,
   useAutoCheckInGPS,
+  useUnlockUrgentAudio,
 } from "./Urgenza";
 
 const HOTEL_LOGO =
@@ -1757,6 +1758,7 @@ function PlanningSale({ user, onClose, onFlash }) {
 export default function App() {
   const [user, setUser] = useState(() => ST.get("ses"));
   useAutoCheckInGPS(user);
+  useUnlockUrgentAudio(user);
   const [items, setItems] = useState([]);
   const [planned, setPlanned] = useState([]);
   const [tec, setTec] = useState([]);

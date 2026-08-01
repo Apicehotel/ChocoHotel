@@ -14,9 +14,59 @@ import { DB } from "./db.js";
 
 // Sirena continua e assordante: onda dentata che sale/scende senza pause,
 // doppio oscillatore leggermente stonato per renderla piu' dura.
-export function playUrgentSiren() {
+//
+// BUG RISOLTO: prima si creava un nuovo AudioContext ad ogni chiamata. I
+// browser (soprattutto su mobile) avviano l'AudioContext "sospeso" finche'
+// non viene sbloccato da un tocco dell'utente — e la sirena parte da un
+// evento del database (realtime), non da un tocco, quindi restava muta.
+// Ora si usa un unico AudioContext condiviso, sbloccato al primo tocco
+// dopo il login (vedi useUnlockUrgentAudio), e ripreso (resume) prima di
+// ogni riproduzione per sicurezza.
+let sharedCtx = null;
+function getSharedCtx() {
+  if (!sharedCtx) {
+    sharedCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  return sharedCtx;
+}
+
+// Da chiamare durante un vero tocco/click dell'utente (unico modo per
+// sbloccare l'audio su iOS/Safari e sui browser con autoplay bloccato).
+export function unlockUrgentAudio() {
   try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = getSharedCtx();
+    if (ctx.state === "suspended") ctx.resume();
+    // Un buffer silenzioso, riprodotto durante il tocco, sblocca
+    // definitivamente l'audio su iOS anche per riproduzioni future.
+    const buffer = ctx.createBuffer(1, 1, 22050);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(ctx.destination);
+    source.start(0);
+  } catch (e) {
+    /* niente da fare se il browser non supporta Web Audio */
+  }
+}
+
+// Sblocca l'audio al primo tocco dell'utente dopo il login (una volta sola).
+export function useUnlockUrgentAudio(user) {
+  useEffect(() => {
+    if (!user) return;
+    const onFirstTouch = () => {
+      unlockUrgentAudio();
+      window.removeEventListener("pointerdown", onFirstTouch);
+    };
+    window.addEventListener("pointerdown", onFirstTouch, { once: true });
+    return () => window.removeEventListener("pointerdown", onFirstTouch);
+  }, [user]);
+}
+
+export async function playUrgentSiren() {
+  try {
+    const ctx = getSharedCtx();
+    if (ctx.state === "suspended") {
+      await ctx.resume();
+    }
     const now = ctx.currentTime;
     const duration = 5;
 
