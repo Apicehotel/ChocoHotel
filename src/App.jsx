@@ -7,6 +7,7 @@ import {
   canInviaUrgenza,
   UrgenzaSendButton,
   UrgenzaBanner,
+  UrgenzeLog,
   InStrutturaToggle,
   useAutoCheckInGPS,
   useUnlockUrgentAudio,
@@ -1799,7 +1800,9 @@ export default function App() {
   const FILTERS =
     user?.role === "responsabile_area"
       ? ["aperte", "fatte", "tutte"]
-      : ["aperte", "tec", "att", "fatte", "tutte"];
+      : user?.role === "manutentore"
+        ? ["aperte", "tec", "att", "urg", "fatte", "tutte"]
+        : ["aperte", "tec", "att", "fatte", "tutte"];
   const swipeRef = useRef(null);
   const swipeStart = useRef(null);
   const swipeAnim = useRef(null);
@@ -2131,13 +2134,36 @@ export default function App() {
 
   const isAreaRole =
     user.role === "responsabile_area" || user.role === "sviluppatore";
+  const cntUrgApertePerBadge = (urgenze || []).filter(
+    (u) => u.status !== "presa_in_carico",
+  ).length;
+  // Badge rosso con contatore sull'icona dell'app (come nelle app native),
+  // non solo nella notifica push: Badging API, supportata da iOS 16.4+ e
+  // Chrome/Android per PWA installate. Se il browser non la supporta non
+  // succede nulla (nessun errore, solo nessun badge).
+  useEffect(() => {
+    if (user?.role !== "manutentore") return;
+    if (!("setAppBadge" in navigator)) return;
+    if (cntUrgApertePerBadge > 0) {
+      navigator.setAppBadge(cntUrgApertePerBadge).catch(() => {});
+    } else {
+      navigator.clearAppBadge?.().catch(() => {});
+    }
+  }, [cntUrgApertePerBadge, user]);
   const filterRow1 = isAreaRole
     ? [["aperte", "Da fare", cnt.todo]]
-    : [
-        ["aperte", "Da fare", cnt.todo],
-        ["tec", "Tecnico", cnt.tec],
-        ["att", "Attesa pezzo", cnt.att],
-      ];
+    : user.role === "manutentore"
+      ? [
+          ["aperte", "Da fare", cnt.todo],
+          ["tec", "Tecnico", cnt.tec],
+          ["att", "Attesa pezzo", cnt.att],
+          ["urg", "Urgenze", cntUrgApertePerBadge],
+        ]
+      : [
+          ["aperte", "Da fare", cnt.todo],
+          ["tec", "Tecnico", cnt.tec],
+          ["att", "Attesa pezzo", cnt.att],
+        ];
 
   // ruoli che gestiscono la struttura (vedono tutto)
   const isGestione =
@@ -2738,16 +2764,41 @@ export default function App() {
                   borderRadius: 11,
                   fontSize: 12.5,
                   fontWeight: 600,
-                  background: filter === k ? "#1B2420" : "#fff",
-                  color: filter === k ? "#fff" : "#5C645E",
-                  border: "1px solid " + (filter === k ? "#1B2420" : "#E4E0D6"),
+                  background:
+                    filter === k
+                      ? "#1B2420"
+                      : k === "urg" && n > 0
+                        ? "#FDEAEA"
+                        : "#fff",
+                  color:
+                    filter === k
+                      ? "#fff"
+                      : k === "urg" && n > 0
+                        ? "#8A0F0F"
+                        : "#5C645E",
+                  border:
+                    "1px solid " +
+                    (filter === k
+                      ? "#1B2420"
+                      : k === "urg" && n > 0
+                        ? "#C81E1E"
+                        : "#E4E0D6"),
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                 }}
               >
-                {l} <span style={{ fontSize: 11, opacity: 0.7 }}>{n}</span>
+                {l}{" "}
+                <span
+                  style={{
+                    fontSize: 11,
+                    opacity: filter === k || (k === "urg" && n > 0) ? 1 : 0.7,
+                    fontWeight: k === "urg" && n > 0 ? 800 : 600,
+                  }}
+                >
+                  {n}
+                </span>
               </button>
             ))}
           </div>
@@ -2784,6 +2835,8 @@ export default function App() {
               </button>
             ))}
           </div>
+          {filter !== "urg" && (
+          <>
           <div style={{ position: "relative", marginBottom: 10 }}>
             <svg
               width="16"
@@ -2946,6 +2999,11 @@ export default function App() {
                 </>
               )}
             </>
+          )}
+          </>
+          )}
+          {filter === "urg" && (
+            <UrgenzeLog urgenze={urgenze} onTake={prendiUrgenza} />
           )}
         </main>
       )}

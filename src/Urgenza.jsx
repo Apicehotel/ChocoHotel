@@ -404,6 +404,122 @@ export function UrgenzaBanner({ urgenze, user, onTake }) {
   );
 }
 
+// ── Linguetta "Urgenze": lista persistente (non sparisce quando presa in
+// carico, resta consultabile finche' la pulizia automatica a 72h non la
+// toglie dal DB). Complementa il banner in cima, che invece serve per
+// l'allarme immediato con suono.
+export function UrgenzeLog({ urgenze, onTake }) {
+  if (!urgenze || urgenze.length === 0) {
+    return (
+      <div
+        style={{
+          textAlign: "center",
+          padding: "60px 20px",
+          color: "#5C645E",
+        }}
+      >
+        <div style={{ fontWeight: 600, color: "#1B2420" }}>
+          Nessuna richiesta urgente
+        </div>
+        <div style={{ fontSize: 12.5, marginTop: 6, color: "#8A9490" }}>
+          Le richieste restano qui per 72 ore, poi vengono rimosse in
+          automatico.
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div style={{ paddingTop: 4 }}>
+      {urgenze.map((u) => {
+        const presa = u.status === "presa_in_carico";
+        return (
+          <div
+            key={u.id}
+            style={{
+              background: presa ? "#E3F1EE" : "#C81E1E",
+              color: presa ? "#0A4A40" : "#fff",
+              borderRadius: 14,
+              padding: "14px 16px",
+              marginBottom: 10,
+            }}
+          >
+            <div
+              style={{
+                fontSize: 10.5,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+                fontWeight: 800,
+                background: presa
+                  ? "rgba(10,74,64,.12)"
+                  : "rgba(255,255,255,.2)",
+                display: "inline-block",
+                padding: "3px 9px",
+                borderRadius: 20,
+                marginBottom: 8,
+              }}
+            >
+              {presa ? "✅ Gestita" : "🚨 Richiesta urgente"}
+            </div>
+            <div style={{ fontSize: 12.5, opacity: 0.9, marginBottom: 8 }}>
+              Da {u.createdBy}
+              {" · "}
+              {new Date(u.createdAt).toLocaleString("it-IT", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+            <div
+              style={{
+                background: presa ? "rgba(10,74,64,.08)" : "rgba(255,255,255,.15)",
+                borderRadius: 10,
+                padding: "10px 12px",
+                fontSize: 14,
+                lineHeight: 1.4,
+                marginBottom: presa ? 0 : 12,
+              }}
+            >
+              {u.note}
+            </div>
+            {presa ? (
+              <div style={{ fontSize: 12, marginTop: 8, fontWeight: 600 }}>
+                Presa in carico da {u.takenBy}
+                {u.takenAt
+                  ? " · " +
+                    new Date(u.takenAt).toLocaleString("it-IT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : ""}
+              </div>
+            ) : (
+              <button
+                onClick={() => onTake(u.id)}
+                style={{
+                  width: "100%",
+                  padding: 12,
+                  borderRadius: 10,
+                  border: "none",
+                  background: "#fff",
+                  color: "#8A0F0F",
+                  fontSize: 13.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Preso in carico
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Check-in manuale "Sono in struttura" (solo manutentore) ─────────────────
 // E' la base sempre affidabile: funziona anche ad app chiusa perche' e'
 // solo un flag nel DB. Il rilevamento GPS (vedi useAutoCheckInGPS in App.jsx)
