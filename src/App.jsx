@@ -1793,6 +1793,25 @@ export default function App() {
   const [myWorkOpen, setMyWorkOpen] = useState(false);
   const [planningOpen, setPlanningOpen] = useState(false);
   const [urgenze, setUrgenze] = useState([]);
+  // Badge rosso con contatore sull'icona dell'app (come nelle app native),
+  // non solo nella notifica push: Badging API, supportata da iOS 16.4+ e
+  // Chrome/Android per PWA installate. Se il browser non la supporta non
+  // succede nulla (nessun errore, solo nessun badge). Deve stare qui,
+  // PRIMA del return condizionale piu' sotto (se (!user) return <Login/>),
+  // altrimenti l'hook non verrebbe chiamato in modo coerente ad ogni
+  // render e React va in crash (schermata bianca).
+  useEffect(() => {
+    if (user?.role !== "manutentore") return;
+    if (!("setAppBadge" in navigator)) return;
+    const nAperte = (urgenze || []).filter(
+      (u) => u.status !== "presa_in_carico",
+    ).length;
+    if (nAperte > 0) {
+      navigator.setAppBadge(nAperte).catch(() => {});
+    } else {
+      navigator.clearAppBadge?.().catch(() => {});
+    }
+  }, [urgenze, user]);
   const toastRef = useRef();
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("urgenza");
@@ -2137,19 +2156,6 @@ export default function App() {
   const cntUrgApertePerBadge = (urgenze || []).filter(
     (u) => u.status !== "presa_in_carico",
   ).length;
-  // Badge rosso con contatore sull'icona dell'app (come nelle app native),
-  // non solo nella notifica push: Badging API, supportata da iOS 16.4+ e
-  // Chrome/Android per PWA installate. Se il browser non la supporta non
-  // succede nulla (nessun errore, solo nessun badge).
-  useEffect(() => {
-    if (user?.role !== "manutentore") return;
-    if (!("setAppBadge" in navigator)) return;
-    if (cntUrgApertePerBadge > 0) {
-      navigator.setAppBadge(cntUrgApertePerBadge).catch(() => {});
-    } else {
-      navigator.clearAppBadge?.().catch(() => {});
-    }
-  }, [cntUrgApertePerBadge, user]);
   const filterRow1 = isAreaRole
     ? [["aperte", "Da fare", cnt.todo]]
     : user.role === "manutentore"
