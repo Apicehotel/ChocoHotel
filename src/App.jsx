@@ -565,7 +565,7 @@ function roleDisplayFor(role, zones) {
   if (zz.some((z) => z.includes("risto")))
     return { label: "Ristorante", icon: "wine" };
   if (zz.some((z) => z.includes("colazioni")))
-    return { label: "Colazioni", icon: "coffee" };
+    return { label: "Isola dei Golosi", icon: "coffee" };
   return { label: "Area", icon: "list" };
 }
 // Tecnici esterni: ancora nessuno per Chocohotel, da aggiungere quando disponibili.
@@ -1932,7 +1932,7 @@ export default function App() {
         : myZones
               .map((z) => String(z).toLowerCase())
               .some((z) => z.includes("colazioni"))
-          ? { label: "Colazioni", icon: "coffee" }
+          ? { label: "Isola dei Golosi", icon: "coffee" }
           : { label: "Area", icon: "list" }
       : null;
   const myRoleLabel = areaInfo ? areaInfo.label : ROLES[user?.role]?.label;
@@ -7625,7 +7625,7 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                     ([k]) => k !== "responsabile_area",
                   ),
                   ["ristorante", { label: "Ristorante", icon: "wine" }],
-                  ["colazioni", { label: "Colazioni", icon: "coffee" }],
+                  ["colazioni", { label: "Isola dei Golosi", icon: "coffee" }],
                 ].map(([k, r]) => {
                   const sel =
                     k === "ristorante"
@@ -7644,7 +7644,7 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                         } else if (k === "colazioni") {
                           setNewRole("responsabile_area");
                           setAreaSubtype("colazioni");
-                          setNewAreaZones("Sala Colazioni");
+                          setNewAreaZones("Isola dei Golosi");
                         } else {
                           setNewRole(k);
                           setAreaSubtype(null);
