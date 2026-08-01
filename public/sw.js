@@ -2,7 +2,7 @@
 // 1) Notifiche push
 // 2) Cache offline: l'app si apre senza rete e mostra gli ultimi dati scaricati
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL_CACHE = `shell-${VERSION}`;   // pagina e file statici dell'app
 const DATA_CACHE  = `data-${VERSION}`;    // ultime risposte lette da Supabase
 
@@ -122,16 +122,28 @@ self.addEventListener('push', (event) => {
     data = { title: 'App Manutenzioni', body: event.data ? event.data.text() : '' };
   }
   const title = data.title || 'App Manutenzioni';
+  const urgent = !!data.urgent;
   const options = {
     body: data.body || '',
     icon: '/favicon-192.png',
     badge: '/favicon-192.png',
     tag: data.tag,
     renotify: !!data.tag,
-    data: { url: data.url || '/' },
-    vibrate: [80, 40, 80],
+    data: { url: data.url || '/', urgent },
+    // Le richieste urgenti restano visibili finche' non vengono toccate e
+    // vibrano piu' a lungo; le notifiche normali restano leggere.
+    requireInteraction: urgent,
+    vibrate: urgent ? [400, 80, 400, 80, 400, 80, 400] : [80, 40, 80],
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil((async () => {
+    await self.registration.showNotification(title, options);
+    if (urgent) {
+      // Se l'app e' aperta in una scheda, avvisa la pagina di far partire
+      // la sirena vera (il suono di sistema della notifica non basta).
+      const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      clientsList.forEach((c) => c.postMessage({ type: 'urgenza', title, body: data.body || '' }));
+    }
+  })());
 });
 
 self.addEventListener('notificationclick', (event) => {

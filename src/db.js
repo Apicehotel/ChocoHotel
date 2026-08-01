@@ -308,10 +308,67 @@ export const DB = {
       .eq("id", id);
     if (error) console.error(error);
   },
+
+  // ── Richieste urgenti (allarme broadcast a tutti i manutentori) ──────────
+  async loadUrgenze() {
+    const { data, error } = await supabase
+      .from("richieste_urgenti")
+      .select("*")
+      .order("creato_il", { ascending: false })
+      .limit(20);
+    if (error) {
+      console.error(error);
+      return [];
+    }
+    return data.map(urgenzaFromRow);
+  },
+  async addUrgenza(nota, creatoDa) {
+    const row = {
+      nota: String(nota).slice(0, 255),
+      creato_da: creatoDa,
+      stato: "aperta",
+    };
+    const { data, error } = await supabase
+      .from("richieste_urgenti")
+      .insert(row)
+      .select()
+      .single();
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    return urgenzaFromRow(data);
+  },
+  async prendiUrgenza(id, nome) {
+    const { error } = await supabase
+      .from("richieste_urgenti")
+      .update({
+        stato: "presa_in_carico",
+        presa_in_carico_da: nome,
+        presa_in_carico_il: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (error) console.error(error);
+    return !error;
+  },
 };
 
 // UID per nuovi record (Supabase genera comunque il suo, ma serve per la UI)
 export const newId = () => crypto.randomUUID();
+
+function urgenzaFromRow(r) {
+  return {
+    id: r.id,
+    note: r.nota,
+    createdBy: r.creato_da,
+    createdAt: r.creato_il ? new Date(r.creato_il).getTime() : Date.now(),
+    status: r.stato,
+    takenBy: r.presa_in_carico_da,
+    takenAt: r.presa_in_carico_il
+      ? new Date(r.presa_in_carico_il).getTime()
+      : null,
+  };
+}
 
 function prenotazioneFromRow(r) {
   return {
