@@ -308,7 +308,121 @@ export const DB = {
       .eq("id", id);
     if (error) console.error(error);
   },
+
+  // ── Richieste urgenti (allarme broadcast a tutti i manutentori) ──────────
+  async loadUrgenze() {
+    const { data, error } = await supabase
+      .from("richieste_urgenti")
+      .select("*")
+      .order("creato_il", { ascending: false })
+      .limit(20);
+    if (error) {
+      console.error(error);
+      return [];
+    }
+    return data.map(urgenzaFromRow);
+  },
+  async addUrgenza(nota, creatoDa) {
+    const row = {
+      nota: String(nota).slice(0, 255),
+      creato_da: creatoDa,
+      stato: "aperta",
+    };
+    const { data, error } = await supabase
+      .from("richieste_urgenti")
+      .insert(row)
+      .select()
+      .single();
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    return urgenzaFromRow(data);
+  },
+  async prendiUrgenza(id, nome) {
+    const { error } = await supabase
+      .from("richieste_urgenti")
+      .update({
+        stato: "presa_in_carico",
+        presa_in_carico_da: nome,
+        presa_in_carico_il: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (error) console.error(error);
+    return !error;
+  },
+
+  // ── Presenza in struttura (check-in manuale + rilevamento GPS) ────────────
+  async loadMiaPresenza(nome) {
+    const { data, error } = await supabase
+      .from("utenti")
+      .select("in_struttura, in_struttura_dal, in_struttura_via")
+      .eq("nome", nome)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      console.error(error);
+      return null;
+    }
+    return data;
+  },
+  async setInStrutturaManuale(nome, valore) {
+    const { error } = await supabase
+      .from("utenti")
+      .update({
+        in_struttura: valore,
+        in_struttura_dal: new Date().toISOString(),
+        in_struttura_via: "manuale",
+      })
+      .eq("nome", nome);
+    if (error) console.error(error);
+    return !error;
+  },
+  async autoSetInStrutturaGPS(nome, dentroRaggio) {
+    const { data } = await supabase
+      .from("utenti")
+      .select("in_struttura_via")
+      .eq("nome", nome)
+      .limit(1)
+      .maybeSingle();
+    if (data?.in_struttura_via === "manuale") return;
+    const { error } = await supabase
+      .from("utenti")
+      .update({
+        in_struttura: dentroRaggio,
+        in_struttura_dal: new Date().toISOString(),
+        in_struttura_via: "gps",
+      })
+      .eq("nome", nome);
+    if (error) console.error(error);
+  },
+  async loadManutentoriPresenza() {
+    const { data, error } = await supabase
+      .from("utenti")
+      .select("nome, in_struttura, in_struttura_dal, in_struttura_via")
+      .eq("ruolo", "manutentore")
+      .order("nome");
+    if (error) {
+      console.error(error);
+      return [];
+    }
+    return data;
+  },
 };
+
+function urgenzaFromRow(r) {
+  return {
+    id: r.id,
+    note: r.nota,
+    createdBy: r.creato_da,
+    createdAt: r.creato_il ? new Date(r.creato_il).getTime() : Date.now(),
+    status: r.stato,
+    takenBy: r.presa_in_carico_da,
+    takenAt: r.presa_in_carico_il
+      ? new Date(r.presa_in_carico_il).getTime()
+      : null,
+  };
+}
 
 // UID per nuovi record (Supabase genera comunque il suo, ma serve per la UI)
 export const newId = () => crypto.randomUUID();
