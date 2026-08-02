@@ -1,6 +1,6 @@
 // Urgenza.jsx — richieste urgenti (allarme broadcast a tutti i manutentori)
 //
-// Chi puo' inviarle: direzione, direttore_congressi, reception, sviluppatore.
+// Chi puo' inviarle: direzione, reception, sviluppatore.
 // Chi le riceve: manutentore (tutti quelli attivi, non solo chi e' di turno,
 // per non rischiare che l'allarme non arrivi a nessuno).
 //
@@ -102,7 +102,6 @@ export async function playUrgentSiren() {
 
 const CAN_INVIA_URGENZA = [
   "direzione",
-  "direttore_congressi",
   "reception",
   "sviluppatore",
 ];
