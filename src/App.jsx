@@ -7529,6 +7529,25 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
     setUsers(u);
     onSaveUsers && onSaveUsers(u);
   };
+  const [pinResetMsg, setPinResetMsg] = useState(null);
+  const resetPin = async (u) => {
+    await DB.updateUserPin(u.name, u.role, "0000");
+    // "0000" da solo non basterebbe a forzare il cambio: serve il flag
+    // deve_cambiare_pin, che updateUserPin invece toglie (e' pensato per
+    // il cambio volontario dell'utente stesso). Lo rimettiamo qui apposta,
+    // cosi' al prossimo accesso l'utente e' costretto a sceglierne uno suo.
+    await supabase
+      .from("utenti")
+      .update({ deve_cambiare_pin: true })
+      .eq("id", u.id);
+    const nu = users.map((x) =>
+      x.id === u.id ? { ...x, pin: "0000", mustChangePin: true } : x,
+    );
+    setUsers(nu);
+    onSaveUsers && onSaveUsers(nu);
+    setPinResetMsg(u.name);
+    setTimeout(() => setPinResetMsg(null), 3000);
+  };
   const [syncMsg, setSyncMsg] = useState(null);
   const syncDefaults = () => {
     const missing = DEF_USERS.filter(
@@ -7717,6 +7736,30 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                 </div>
               </div>{" "}
               <button
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      `Reimpostare il PIN di ${u.name} a 0000? Dovrà sceglierne uno nuovo al prossimo accesso.`,
+                    )
+                  )
+                    resetPin(u);
+                }}
+                title="Reimposta PIN a 0000"
+                style={{
+                  background: "#E3F1EE",
+                  border: "none",
+                  borderRadius: 7,
+                  width: 30,
+                  height: 30,
+                  display: "grid",
+                  placeItems: "center",
+                  cursor: "pointer",
+                  color: "#0A4A40",
+                }}
+              >
+                {I.refresh}
+              </button>{" "}
+              <button
                 onClick={() => rm(u.id)}
                 style={{
                   background: "#FBE9E6",
@@ -7735,6 +7778,22 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
             </div>
           ))}{" "}
         </div>{" "}
+        {pinResetMsg && (
+          <div
+            style={{
+              background: "#E3F1EE",
+              color: "#0A4A40",
+              borderRadius: 10,
+              padding: "10px 14px",
+              fontSize: 13,
+              fontWeight: 600,
+              marginBottom: 12,
+            }}
+          >
+            ✓ PIN di {pinResetMsg} reimpostato a 0000 — dovrà sceglierne uno
+            nuovo al prossimo accesso.
+          </div>
+        )}
         {showForm ? (
           <div
             style={{
