@@ -1766,6 +1766,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("segnalazioni"); // "segnalazioni" | "interventi"
   const [filter, setFilter] = useState("aperte");
+  const [urgFilter, setUrgFilter] = useState("tutte"); // tutte | attesa | lavorazione | fatte
   const [sheet, setSheet] = useState(null);
   const [viewer, setViewer] = useState(null);
   const [toast, setToast] = useState(null);
@@ -1829,13 +1830,7 @@ export default function App() {
   const FILTERS =
     user?.role === "responsabile_area"
       ? ["aperte", "fatte", "tutte"]
-      : user?.role === "manutentore" ||
-          user?.role === "direzione" ||
-          user?.role === "direttore_congressi" ||
-          user?.role === "reception" ||
-          user?.role === "sviluppatore"
-        ? ["aperte", "tec", "att", "urg", "fatte", "tutte"]
-        : ["aperte", "tec", "att", "fatte", "tutte"];
+      : ["aperte", "tec", "att", "fatte", "tutte"];
   const swipeRef = useRef(null);
   const swipeStart = useRef(null);
   const swipeAnim = useRef(null);
@@ -2180,21 +2175,11 @@ export default function App() {
   ).length;
   const filterRow1 = isAreaRole
     ? [["aperte", "Da fare", cnt.todo]]
-    : user.role === "manutentore" ||
-        user.role === "direzione" ||
-        user.role === "direttore_congressi" ||
-        user.role === "reception"
-      ? [
-          ["aperte", "Da fare", cnt.todo],
-          ["tec", "Tecnico", cnt.tec],
-          ["att", "Attesa pezzo", cnt.att],
-          ["urg", "Urgenze", cntUrgApertePerBadge],
-        ]
-      : [
-          ["aperte", "Da fare", cnt.todo],
-          ["tec", "Tecnico", cnt.tec],
-          ["att", "Attesa pezzo", cnt.att],
-        ];
+    : [
+        ["aperte", "Da fare", cnt.todo],
+        ["tec", "Tecnico", cnt.tec],
+        ["att", "Attesa pezzo", cnt.att],
+      ];
 
   // ruoli che gestiscono la struttura (vedono tutto)
   const isGestione =
@@ -2202,6 +2187,8 @@ export default function App() {
     user.role === "direttore_congressi" ||
     user.role === "reception" ||
     user.role === "sviluppatore";
+  // chi manda o riceve le richieste urgenti: ha diritto alla scheda dedicata
+  const vedeUrgenze = isGestione || user.role === "manutentore";
   // ruoli operativi che vedono gli interventi
   const vedeInterventi =
     isGestione || user.role === "manutentore";
@@ -2454,6 +2441,9 @@ export default function App() {
         >
           {[
             ["segnalazioni", "Segnalazioni", cnt.todo],
+            ...(vedeUrgenze
+              ? [["urgenze", "Avvisi Urgenti", cntUrgApertePerBadge]]
+              : []),
             ...(vedeInterventi
               ? [["interventi", "Interventi", cntPlan.pending]]
               : []),
@@ -2484,9 +2474,11 @@ export default function App() {
                 <span
                   style={{
                     background:
-                      tab === k
-                        ? "rgba(255,255,255,.25)"
-                        : "rgba(255,255,255,.15)",
+                      k === "urgenze"
+                        ? "#C81E1E"
+                        : tab === k
+                          ? "rgba(255,255,255,.25)"
+                          : "rgba(255,255,255,.15)",
                     borderRadius: 999,
                     fontSize: 11,
                     fontWeight: 700,
@@ -2503,7 +2495,7 @@ export default function App() {
       {user.role === "manutentore" && (
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <InStrutturaToggle user={user} />
-          {!(tab === "segnalazioni" && filter === "urg") && (
+          {tab !== "urgenze" && (
             <UrgenzaBanner
               urgenze={urgenze}
               user={user}
@@ -2798,25 +2790,9 @@ export default function App() {
                   borderRadius: 11,
                   fontSize: 12.5,
                   fontWeight: 600,
-                  background:
-                    filter === k
-                      ? "#1B2420"
-                      : k === "urg" && n > 0
-                        ? "#FDEAEA"
-                        : "#fff",
-                  color:
-                    filter === k
-                      ? "#fff"
-                      : k === "urg" && n > 0
-                        ? "#8A0F0F"
-                        : "#5C645E",
-                  border:
-                    "1px solid " +
-                    (filter === k
-                      ? "#1B2420"
-                      : k === "urg" && n > 0
-                        ? "#C81E1E"
-                        : "#E4E0D6"),
+                  background: filter === k ? "#1B2420" : "#fff",
+                  color: filter === k ? "#fff" : "#5C645E",
+                  border: "1px solid " + (filter === k ? "#1B2420" : "#E4E0D6"),
                   cursor: "pointer",
                   whiteSpace: "nowrap",
                   overflow: "hidden",
@@ -2827,8 +2803,8 @@ export default function App() {
                 <span
                   style={{
                     fontSize: 11,
-                    opacity: filter === k || (k === "urg" && n > 0) ? 1 : 0.7,
-                    fontWeight: k === "urg" && n > 0 ? 800 : 600,
+                    opacity: filter === k ? 1 : 0.7,
+                    fontWeight: 600,
                   }}
                 >
                   {n}
@@ -2869,8 +2845,6 @@ export default function App() {
               </button>
             ))}
           </div>
-          {filter !== "urg" && (
-          <>
           <div style={{ position: "relative", marginBottom: 10 }}>
             <svg
               width="16"
@@ -3034,16 +3008,93 @@ export default function App() {
               )}
             </>
           )}
-          </>
-          )}
-          {filter === "urg" && (
-            <UrgenzeLog
-              urgenze={urgenze}
-              onTake={prendiUrgenza}
-              onComplete={completaUrgenza}
-              canTake={user.role === "manutentore"}
-            />
-          )}
+        </main>
+      )}
+      {/* ===== TAB: AVVISI URGENTI ===== */}
+      {tab === "urgenze" && (
+        <main
+          style={{ maxWidth: 760, margin: "0 auto", padding: "14px 14px 90px" }}
+        >
+          {(() => {
+            const nAttesa = (urgenze || []).filter(
+              (u) => u.status === "aperta",
+            ).length;
+            const nLavorazione = (urgenze || []).filter(
+              (u) => u.status === "presa_in_carico",
+            ).length;
+            const nFatte = (urgenze || []).filter(
+              (u) => u.status === "completata",
+            ).length;
+            const chips = [
+              ["tutte", "Tutte", urgenze?.length || 0],
+              ["attesa", "In attesa", nAttesa],
+              ["lavorazione", "In lavorazione", nLavorazione],
+              ["fatte", "Fatte", nFatte],
+            ];
+            const filtrate = (urgenze || []).filter((u) => {
+              if (urgFilter === "attesa") return u.status === "aperta";
+              if (urgFilter === "lavorazione")
+                return u.status === "presa_in_carico";
+              if (urgFilter === "fatte") return u.status === "completata";
+              return true;
+            });
+            return (
+              <>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(4,1fr)",
+                    gap: 6,
+                    marginBottom: 14,
+                  }}
+                >
+                  {chips.map(([k, l, n]) => (
+                    <button
+                      key={k}
+                      onClick={() => setUrgFilter(k)}
+                      style={{
+                        padding: "8px 4px",
+                        borderRadius: 11,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        background:
+                          urgFilter === k
+                            ? "#1B2420"
+                            : k === "attesa" && n > 0
+                              ? "#FDEAEA"
+                              : "#fff",
+                        color:
+                          urgFilter === k
+                            ? "#fff"
+                            : k === "attesa" && n > 0
+                              ? "#8A0F0F"
+                              : "#5C645E",
+                        border:
+                          "1px solid " +
+                          (urgFilter === k
+                            ? "#1B2420"
+                            : k === "attesa" && n > 0
+                              ? "#C81E1E"
+                              : "#E4E0D6"),
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {l} <span style={{ opacity: 0.75 }}>{n}</span>
+                    </button>
+                  ))}
+                </div>
+                <UrgenzeLog
+                  urgenze={filtrate}
+                  onTake={prendiUrgenza}
+                  onComplete={completaUrgenza}
+                  canTake={user.role === "manutentore"}
+                />
+              </>
+            );
+          })()}
         </main>
       )}
       {/* ===== TAB: INTERVENTI PIANIFICATI ===== */}
