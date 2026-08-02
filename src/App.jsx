@@ -564,7 +564,7 @@ function roleDisplayFor(role, zones) {
   const zz = (zones || []).map((z) => String(z).toLowerCase());
   if (zz.some((z) => z.includes("risto")))
     return { label: "Ristorante", icon: "wine" };
-  if (zz.some((z) => z.includes("colazioni")))
+  if (zz.some((z) => z.includes("golosi")))
     return { label: "Isola dei Golosi", icon: "coffee" };
   return { label: "Area", icon: "list" };
 }
@@ -591,7 +591,7 @@ const DEF_USERS = [
   // Governanti: segnalano e basta, come a Hotel Giò. Zone indicate per riferimento.
   { id: "g1", name: "Veronica", role: "governante", pin: "0000", zones: ["Piani"] },
   { id: "g2", name: "Olisea", role: "governante", pin: "0000", zones: ["Hotel"] },
-  { id: "g3", name: "Eriona", role: "governante", pin: "0000", zones: ["Isola dei Golosi"] },
+  { id: "g3", name: "Eriona", role: "responsabile_area", pin: "0000", zones: ["Isola dei Golosi"] },
 ];
 const ADMIN_PIN_DEFAULT = "0000";
 
@@ -1931,7 +1931,7 @@ export default function App() {
         ? { label: "Ristorante", icon: "wine" }
         : myZones
               .map((z) => String(z).toLowerCase())
-              .some((z) => z.includes("colazioni"))
+              .some((z) => z.includes("golosi"))
           ? { label: "Isola dei Golosi", icon: "coffee" }
           : { label: "Area", icon: "list" }
       : null;
@@ -7625,13 +7625,13 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                     ([k]) => k !== "responsabile_area",
                   ),
                   ["ristorante", { label: "Ristorante", icon: "wine" }],
-                  ["colazioni", { label: "Isola dei Golosi", icon: "coffee" }],
+                  ["golosi", { label: "Isola dei Golosi", icon: "coffee" }],
                 ].map(([k, r]) => {
                   const sel =
                     k === "ristorante"
                       ? areaSubtype === "ristorante"
-                      : k === "colazioni"
-                        ? areaSubtype === "colazioni"
+                      : k === "golosi"
+                        ? areaSubtype === "golosi"
                         : newRole === k;
                   return (
                     <button
@@ -7641,9 +7641,9 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                           setNewRole("responsabile_area");
                           setAreaSubtype("ristorante");
                           setNewAreaZones("Risto Wine, Risto Jazz");
-                        } else if (k === "colazioni") {
+                        } else if (k === "golosi") {
                           setNewRole("responsabile_area");
-                          setAreaSubtype("colazioni");
+                          setAreaSubtype("golosi");
                           setNewAreaZones("Isola dei Golosi");
                         } else {
                           setNewRole(k);
