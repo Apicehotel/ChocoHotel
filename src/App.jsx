@@ -9,6 +9,7 @@ import {
   UrgenzaBanner,
   UrgenzeLog,
   InStrutturaToggle,
+  GpsSuggestionPopup,
   useAutoCheckInGPS,
   useUnlockUrgentAudio,
 } from "./Urgenza";
@@ -1758,7 +1759,9 @@ function PlanningSale({ user, onClose, onFlash }) {
 
 export default function App() {
   const [user, setUser] = useState(() => ST.get("ses"));
-  useAutoCheckInGPS(user);
+  const [gpsSuggestion, setGpsSuggestion] = useState(false);
+  const [presenceRefreshSignal, setPresenceRefreshSignal] = useState(0);
+  useAutoCheckInGPS(user, () => setGpsSuggestion(true));
   useUnlockUrgentAudio(user);
   const [items, setItems] = useState([]);
   const [planned, setPlanned] = useState([]);
@@ -2494,7 +2497,7 @@ export default function App() {
       </header>
       {user.role === "manutentore" && (
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <InStrutturaToggle user={user} />
+          <InStrutturaToggle user={user} refreshSignal={presenceRefreshSignal} />
           {tab !== "urgenze" && (
             <UrgenzaBanner
               urgenze={urgenze}
@@ -3540,6 +3543,16 @@ export default function App() {
             </div>
           </div>
         )}
+      {gpsSuggestion && (
+        <GpsSuggestionPopup
+          onConfirm={async () => {
+            await DB.setInStrutturaManuale(user.name, true);
+            setPresenceRefreshSignal((s) => s + 1);
+            setGpsSuggestion(false);
+          }}
+          onDismiss={() => setGpsSuggestion(false)}
+        />
+      )}
       {switchConfirm && (
         <div
           style={{

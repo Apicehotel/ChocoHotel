@@ -575,12 +575,20 @@ export function UrgenzeLog({ urgenze, onTake, onComplete, canTake = true }) {
 
 // ── Check-in manuale "Sono in struttura" (solo manutentore) ─────────────────
 // E' la base sempre affidabile: funziona anche ad app chiusa perche' e'
-// solo un flag nel DB. Il rilevamento GPS (vedi useAutoCheckInGPS in App.jsx)
-// puo' accendere questo stato in automatico, ma non lo spegne mai se e'
-// stato acceso a mano: il manuale ha sempre l'ultima parola.
-export function InStrutturaToggle({ user }) {
+// solo un flag nel DB. Il rilevamento GPS (vedi useAutoCheckInGPS) puo'
+// accendere questo stato in automatico SOLO se non e' mai stato impostato
+// a mano (o l'ultima volta l'ha impostato lui stesso). Se invece l'ultima
+// parola e' stata manuale, il GPS non lo tocca mai in silenzio: al massimo
+// propone (vedi GpsSuggestionPopup), non decide da solo.
+const GPS_PREF_KEY = "urgenza_gps_enabled";
+export function isGpsCheckinEnabled() {
+  return localStorage.getItem(GPS_PREF_KEY) !== "off";
+}
+
+export function InStrutturaToggle({ user, refreshSignal }) {
   const [dentro, setDentro] = useState(null); // null = non ancora caricato
   const [busy, setBusy] = useState(false);
+  const [gpsOn, setGpsOn] = useState(isGpsCheckinEnabled);
 
   useEffect(() => {
     let cancelled = false;
@@ -590,7 +598,7 @@ export function InStrutturaToggle({ user }) {
     return () => {
       cancelled = true;
     };
-  }, [user.name]);
+  }, [user.name, refreshSignal]);
 
   if (dentro === null) return null;
 
@@ -602,37 +610,135 @@ export function InStrutturaToggle({ user }) {
     setBusy(false);
   };
 
+  const toggleGps = () => {
+    const nuovo = !gpsOn;
+    localStorage.setItem(GPS_PREF_KEY, nuovo ? "on" : "off");
+    setGpsOn(nuovo);
+  };
+
   return (
-    <button
-      onClick={toggle}
-      disabled={busy}
+    <div style={{ margin: "8px 14px 0", display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <button
+        onClick={toggle}
+        disabled={busy}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 14px",
+          borderRadius: 20,
+          border: "1px solid #E4E4DE",
+          background: dentro ? "#E3F1EE" : "#fff",
+          color: dentro ? "#0A4A40" : "#5C645E",
+          fontSize: 12.5,
+          fontWeight: 700,
+          cursor: busy ? "default" : "pointer",
+          opacity: busy ? 0.7 : 1,
+        }}
+      >
+        {dentro ? "🟢 Sono in struttura" : "⚪️ Non sono in struttura"}
+      </button>
+      <button
+        onClick={toggleGps}
+        title="Se attivo, il telefono puo' rilevare da solo quando sei vicino alla struttura"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          padding: "8px 14px",
+          borderRadius: 20,
+          border: "1px solid #E4E4DE",
+          background: gpsOn ? "#E3F1EE" : "#fff",
+          color: gpsOn ? "#0A4A40" : "#8A9490",
+          fontSize: 12.5,
+          fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        📍 GPS {gpsOn ? "attivo" : "spento"}
+      </button>
+    </div>
+  );
+}
+
+// ── Popup di suggerimento GPS ────────────────────────────────────────────
+// Compare solo quando: il check-in e' spento a mano, ma il GPS rileva che
+// sei entro 200m dalla struttura. Non decide da solo (il manuale vince
+// sempre) — propone, e sei tu a confermare. Al massimo una volta per
+// sessione/accesso, non ad ogni controllo.
+export function GpsSuggestionPopup({ onConfirm, onDismiss }) {
+  return (
+    <div
       style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(27,36,32,.45)",
+        zIndex: 95,
         display: "flex",
-        alignItems: "center",
-        gap: 6,
-        margin: "8px 14px 0",
-        padding: "8px 14px",
-        borderRadius: 20,
-        border: "1px solid #E4E4DE",
-        background: dentro ? "#E3F1EE" : "#fff",
-        color: dentro ? "#0A4A40" : "#5C645E",
-        fontSize: 12.5,
-        fontWeight: 700,
-        cursor: busy ? "default" : "pointer",
-        opacity: busy ? 0.7 : 1,
+        alignItems: "flex-end",
+        justifyContent: "center",
       }}
     >
-      {dentro ? "🟢 Sono in struttura" : "⚪️ Non sono in struttura"}
-    </button>
+      <div style={sheetSt}>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
+          📍 Sei in struttura?
+        </div>
+        <div
+          style={{
+            fontSize: 13.5,
+            lineHeight: 1.5,
+            color: "#3a4340",
+            marginBottom: 16,
+          }}
+        >
+          Il telefono ti rileva vicino a Hotel Giò, ma risulti segnato come
+          "non in struttura". Vuoi aggiornarlo?
+        </div>
+        <button
+          onClick={onConfirm}
+          style={{
+            width: "100%",
+            padding: 14,
+            borderRadius: 12,
+            border: "none",
+            background: "#0F6B5C",
+            color: "#fff",
+            fontSize: 15,
+            fontWeight: 700,
+            cursor: "pointer",
+            marginBottom: 8,
+          }}
+        >
+          Sì, sono qui
+        </button>
+        <button
+          onClick={onDismiss}
+          style={{
+            width: "100%",
+            background: "none",
+            border: "none",
+            color: "#5C645E",
+            fontSize: 13,
+            padding: 8,
+            cursor: "pointer",
+          }}
+        >
+          No, resta spento
+        </button>
+      </div>
+    </div>
   );
 }
 
 // ── Rilevamento GPS automatico (solo manutentore) ───────────────────────────
 // Chiede il permesso di posizione una sola volta (il browser lo ricorda da
-// solo). Se l'app e' aperta ed entro 200m da Hotel Giò, segna "in struttura"
-// in automatico — ma solo se lo stato attuale non e' stato impostato a mano
-// (vedi autoSetInStrutturaGPS in db.js). Non fa nulla se il permesso viene
-// negato o se il browser non supporta la geolocalizzazione.
+// solo). Se l'app e' aperta ed entro 200m da Hotel Giò:
+// - se lo stato NON e' stato impostato a mano (o l'ha impostato il GPS
+//   stesso l'ultima volta), lo aggiorna liberamente, come prima;
+// - se invece l'ultima parola e' stata manuale ed e' spento, NON lo
+//   riaccende in silenzio: chiama onSuggestCheckin (una volta per sessione)
+//   cosi' l'app puo' mostrare il popup di conferma — pensato apposta per
+//   chi si dimentica di premere il pulsante da solo.
 const HOTEL_LAT = 43.1125739;
 const HOTEL_LNG = 12.3773999;
 const RAGGIO_METRI = 200;
@@ -648,15 +754,17 @@ function distanzaMetri(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-export function useAutoCheckInGPS(user) {
+export function useAutoCheckInGPS(user, onSuggestCheckin) {
   useEffect(() => {
     if (!user || user.role !== "manutentore") return;
     if (!("geolocation" in navigator)) return;
+    if (!isGpsCheckinEnabled()) return;
     let cancelled = false;
+    let askedThisSession = false;
 
     const controlla = () => {
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        async (pos) => {
           if (cancelled) return;
           const dist = distanzaMetri(
             pos.coords.latitude,
@@ -664,7 +772,24 @@ export function useAutoCheckInGPS(user) {
             HOTEL_LAT,
             HOTEL_LNG,
           );
-          DB.autoSetInStrutturaGPS(user.name, dist <= RAGGIO_METRI);
+          const dentroRaggio = dist <= RAGGIO_METRI;
+          const mia = await DB.loadMiaPresenza(user.name);
+          if (cancelled) return;
+          if (mia?.in_struttura_via === "manuale") {
+            // Il manuale vince: se e' spento ma il GPS ti rileva qui,
+            // proponi invece di decidere da solo (una volta a sessione).
+            if (
+              !mia.in_struttura &&
+              dentroRaggio &&
+              !askedThisSession &&
+              onSuggestCheckin
+            ) {
+              askedThisSession = true;
+              onSuggestCheckin();
+            }
+            return;
+          }
+          DB.autoSetInStrutturaGPS(user.name, dentroRaggio);
         },
         () => {
           // Permesso negato o posizione non disponibile: ignora in
