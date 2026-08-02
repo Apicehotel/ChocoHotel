@@ -1780,6 +1780,16 @@ export default function App() {
     ST.set("pin_bug_notice_v1_seen", true);
     setPinBugNotice(false);
   };
+  // Annuncio una-tantum per la nuova funzione Richieste urgenti, mostrato
+  // solo a chi la usa davvero (invia o riceve): non a colazioni/ristorante/
+  // governante, che non c'entrano nulla con questo flusso.
+  const [urgenzaNotice, setUrgenzaNotice] = useState(
+    () => !ST.get("urgenza_notice_v1_seen"),
+  );
+  const dismissUrgenzaNotice = () => {
+    ST.set("urgenza_notice_v1_seen", true);
+    setUrgenzaNotice(false);
+  };
   // Conferma prima di passare all'altra struttura: window.location.href
   // e' impostato solo dopo che l'utente conferma nel pannello.
   const [switchConfirm, setSwitchConfirm] = useState(null);
@@ -3430,6 +3440,56 @@ export default function App() {
           </div>
         </div>
       )}
+      {urgenzaNotice &&
+        !user.mustChangePin &&
+        !["responsabile_area", "governante"].includes(user.role) && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              background: "rgba(27,36,32,.45)",
+              zIndex: 90,
+              display: "flex",
+              alignItems: "flex-end",
+              justifyContent: "center",
+            }}
+            onClick={dismissUrgenzaNotice}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: "#fff",
+                width: "100%",
+                maxWidth: 480,
+                borderRadius: "18px 18px 0 0",
+                padding: "20px 20px calc(env(safe-area-inset-bottom, 0px) + 20px)",
+              }}
+            >
+              <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 8 }}>
+                🚨 Novità: Richieste urgenti
+              </div>
+              <div
+                style={{
+                  fontSize: 13.5,
+                  lineHeight: 1.5,
+                  color: "#3a4340",
+                  marginBottom: 16,
+                }}
+              >
+                Per le emergenze vere (allagamento, guasto grave) c'è un
+                nuovo canale più rapido delle segnalazioni normali.{" "}
+                {canInviaUrgenza(user.role)
+                  ? "Trovi il bottone rosso 🚨 per lanciarla in basso a destra."
+                  : "Ti arriverà con un suono forte e resterà visibile finché non la prendi in carico."}{" "}
+                Tutti i dettagli sono nel Manuale, alla voce "Richieste
+                urgenti".
+              </div>
+              <button onClick={dismissUrgenzaNotice} style={ctaSt}>
+                Ho capito
+              </button>
+            </div>
+          </div>
+        )}
       {switchConfirm && (
         <div
           style={{
