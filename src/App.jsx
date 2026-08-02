@@ -3453,7 +3453,6 @@ export default function App() {
               alignItems: "flex-end",
               justifyContent: "center",
             }}
-            onClick={dismissUrgenzaNotice}
           >
             <div
               onClick={(e) => e.stopPropagation()}
@@ -3485,7 +3484,7 @@ export default function App() {
                 urgenti".
               </div>
               <button onClick={dismissUrgenzaNotice} style={ctaSt}>
-                Ho capito
+                Non visualizzare più
               </button>
             </div>
           </div>
