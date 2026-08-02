@@ -8833,6 +8833,7 @@ function PannelloConsumi({ onClose }) {
   const [gio, setGio] = useState(null);
   const [choco, setChoco] = useState(null);
   const [twilio, setTwilio] = useState(null);
+  const [vercelNote, setVercelNote] = useState(null);
   const [loading, setLoading] = useState(true);
   const [errore, setErrore] = useState(null);
 
@@ -8840,16 +8841,26 @@ function PannelloConsumi({ onClose }) {
     setLoading(true);
     setErrore(null);
     try {
-      const [gioRes, chocoRes, twilioRes] = await Promise.all([
+      const [gioRes, chocoRes, twilioRes, vercelRes] = await Promise.all([
         supabase.rpc("get_usage_stats"),
         chocoSupabase.rpc("get_usage_stats"),
         fetch(
           "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/check-twilio-usage",
         ).then((r) => r.json()),
+        supabase
+          .from("app_config")
+          .select("value")
+          .eq("key", "vercel_usage_note")
+          .maybeSingle(),
       ]);
       setGio(gioRes.data);
       setChoco(chocoRes.data);
       setTwilio(twilioRes);
+      if (vercelRes.data?.value) {
+        try {
+          setVercelNote(JSON.parse(vercelRes.data.value));
+        } catch {}
+      }
     } catch (e) {
       setErrore("Errore nel caricamento: " + String(e));
     }
@@ -9062,9 +9073,42 @@ function PannelloConsumi({ onClose }) {
             </CardConsumo>
 
             <CardConsumo titolo="Vercel">
-              <div style={{ fontSize: 13, color: "#5C645E", lineHeight: 1.5 }}>
-                Banda e minuti di build non sono leggibili da qui (nessun
-                accesso API dall'app). Controlla su{" "}
+              {vercelNote && (
+                <>
+                  <RigaStat
+                    label="Traffico in uscita"
+                    valore={`${vercelNote.outgoing_pct}%`}
+                  />
+                  <RigaStat
+                    label="Traffico in entrata"
+                    valore={`${vercelNote.incoming_pct}%`}
+                  />
+                  <RigaStat
+                    label="Fast Origin Transfer"
+                    valore={vercelNote.fast_origin_transfer}
+                  />
+                  <div
+                    style={{ fontSize: 11, color: "#8A9490", marginTop: 8 }}
+                  >
+                    Aggiornato a mano il {vercelNote.aggiornato_il} (nessun
+                    accesso API diretto — vedi nota sotto)
+                  </div>
+                </>
+              )}
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#5C645E",
+                  lineHeight: 1.5,
+                  marginTop: vercelNote ? 10 : 0,
+                  paddingTop: vercelNote ? 10 : 0,
+                  borderTop: vercelNote ? "1px solid #F0EDE5" : "none",
+                }}
+              >
+                Banda e minuti di build non sono leggibili in automatico
+                (nessun accesso API dall'app) — i numeri sopra vengono
+                aggiornati a mano da uno screenshot. Per il dato sempre
+                aggiornato:{" "}
                 <a
                   href="https://vercel.com"
                   target="_blank"
