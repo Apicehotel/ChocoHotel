@@ -1804,7 +1804,7 @@ export default function App() {
     if (user?.role !== "manutentore") return;
     if (!("setAppBadge" in navigator)) return;
     const nAperte = (urgenze || []).filter(
-      (u) => u.status !== "presa_in_carico",
+      (u) => u.status !== "completata",
     ).length;
     if (nAperte > 0) {
       navigator.setAppBadge(nAperte).catch(() => {});
@@ -1882,7 +1882,12 @@ export default function App() {
   const prendiUrgenza = async (id) => {
     await DB.prendiUrgenza(id, user.name);
     await refreshUrgenze();
-    flash("Presa in carico ✓");
+    flash("Sei in arrivo ✓");
+  };
+  const completaUrgenza = async (id) => {
+    await DB.completaUrgenza(id, user.name);
+    await refreshUrgenze();
+    flash("Segnata come fatta ✓");
   };
   const saveItem = async (m) => {
     setItems((prev) => sortItems([...prev.filter((i) => i.id !== m.id), m]));
@@ -2158,7 +2163,7 @@ export default function App() {
   const isAreaRole =
     user.role === "responsabile_area" || user.role === "sviluppatore";
   const cntUrgApertePerBadge = (urgenze || []).filter(
-    (u) => u.status !== "presa_in_carico",
+    (u) => u.status !== "completata",
   ).length;
   const filterRow1 = isAreaRole
     ? [["aperte", "Da fare", cnt.todo]]
@@ -2490,6 +2495,7 @@ export default function App() {
               urgenze={urgenze}
               user={user}
               onTake={prendiUrgenza}
+              onComplete={completaUrgenza}
             />
           )}
         </div>
@@ -3021,6 +3027,7 @@ export default function App() {
             <UrgenzeLog
               urgenze={urgenze}
               onTake={prendiUrgenza}
+              onComplete={completaUrgenza}
               canTake={user.role === "manutentore"}
             />
           )}

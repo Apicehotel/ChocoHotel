@@ -328,77 +328,84 @@ export function UrgenzaSendButton({ user, onSend, onFlash }) {
 }
 
 // ── Banner di ricezione (manutentore) ────────────────────────────────────────
-export function UrgenzaBanner({ urgenze, user, onTake }) {
-  const aperte = (urgenze || []).filter((u) => u.status !== "presa_in_carico");
-  if (!aperte.length) return null;
+// Flusso a 3 stati: aperta (rossa, bottone "Vado") -> presa_in_carico
+// (arancione, bottone "Fatto") -> completata (sparisce dal banner, resta
+// solo nello storico della scheda Urgenze).
+export function UrgenzaBanner({ urgenze, user, onTake, onComplete }) {
+  const attive = (urgenze || []).filter((u) => u.status !== "completata");
+  if (!attive.length) return null;
   return (
     <div style={{ padding: "10px 14px 0" }}>
-      {aperte.map((u) => (
-        <div
-          key={u.id}
-          style={{
-            background: "#C81E1E",
-            color: "#fff",
-            borderRadius: 14,
-            padding: "16px 16px",
-            marginBottom: 10,
-            animation: "urgPulse 1s infinite",
-          }}
-        >
+      {attive.map((u) => {
+        const inCorso = u.status === "presa_in_carico";
+        return (
           <div
+            key={u.id}
             style={{
-              fontSize: 10.5,
-              letterSpacing: ".08em",
-              textTransform: "uppercase",
-              fontWeight: 800,
-              background: "rgba(255,255,255,.2)",
-              display: "inline-block",
-              padding: "3px 9px",
-              borderRadius: 20,
-              marginBottom: 8,
+              background: inCorso ? "#B9762A" : "#C81E1E",
+              color: "#fff",
+              borderRadius: 14,
+              padding: "16px 16px",
+              marginBottom: 10,
+              animation: inCorso ? "none" : "urgPulse 1s infinite",
             }}
           >
-            🚨 Richiesta urgente
+            <div
+              style={{
+                fontSize: 10.5,
+                letterSpacing: ".08em",
+                textTransform: "uppercase",
+                fontWeight: 800,
+                background: "rgba(255,255,255,.2)",
+                display: "inline-block",
+                padding: "3px 9px",
+                borderRadius: 20,
+                marginBottom: 8,
+              }}
+            >
+              {inCorso ? "🟠 In corso" : "🚨 Richiesta urgente"}
+            </div>
+            <div
+              style={{
+                fontSize: 12.5,
+                opacity: 0.9,
+                marginBottom: 8,
+              }}
+            >
+              Da {u.createdBy}
+              {inCorso && u.takenBy ? ` · ${u.takenBy} sta andando` : ""}
+            </div>
+            <div
+              style={{
+                background: "rgba(255,255,255,.15)",
+                borderRadius: 10,
+                padding: "10px 12px",
+                fontSize: 14,
+                lineHeight: 1.4,
+                marginBottom: 12,
+              }}
+            >
+              {u.note}
+            </div>
+            <button
+              onClick={() => (inCorso ? onComplete(u.id) : onTake(u.id))}
+              style={{
+                width: "100%",
+                padding: 12,
+                borderRadius: 10,
+                border: "none",
+                background: "#fff",
+                color: inCorso ? "#8A4A0F" : "#8A0F0F",
+                fontSize: 13.5,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {inCorso ? "Fatto" : "Vado"}
+            </button>
           </div>
-          <div
-            style={{
-              fontSize: 12.5,
-              opacity: 0.9,
-              marginBottom: 8,
-            }}
-          >
-            Da {u.createdBy}
-          </div>
-          <div
-            style={{
-              background: "rgba(255,255,255,.15)",
-              borderRadius: 10,
-              padding: "10px 12px",
-              fontSize: 14,
-              lineHeight: 1.4,
-              marginBottom: 12,
-            }}
-          >
-            {u.note}
-          </div>
-          <button
-            onClick={() => onTake(u.id)}
-            style={{
-              width: "100%",
-              padding: 12,
-              borderRadius: 10,
-              border: "none",
-              background: "#fff",
-              color: "#8A0F0F",
-              fontSize: 13.5,
-              fontWeight: 700,
-              cursor: "pointer",
-            }}
-          >
-            Preso in carico
-          </button>
-        </div>
-      ))}
+        );
+      })}
       <style>{`@keyframes urgPulse{0%,100%{box-shadow:0 0 0 0 rgba(200,30,30,.6)}50%{box-shadow:0 0 0 10px rgba(200,30,30,0)}}`}</style>
     </div>
   );
@@ -408,7 +415,7 @@ export function UrgenzaBanner({ urgenze, user, onTake }) {
 // carico, resta consultabile finche' la pulizia automatica a 72h non la
 // toglie dal DB). Complementa il banner in cima, che invece serve per
 // l'allarme immediato con suono.
-export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
+export function UrgenzeLog({ urgenze, onTake, onComplete, canTake = true }) {
   if (!urgenze || urgenze.length === 0) {
     return (
       <div
@@ -431,13 +438,16 @@ export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
   return (
     <div style={{ paddingTop: 4 }}>
       {urgenze.map((u) => {
-        const presa = u.status === "presa_in_carico";
+        const inCorso = u.status === "presa_in_carico";
+        const fatta = u.status === "completata";
+        const bg = fatta ? "#E3F1EE" : inCorso ? "#FBE9D6" : "#C81E1E";
+        const fg = fatta ? "#0A4A40" : inCorso ? "#8A4A0F" : "#fff";
         return (
           <div
             key={u.id}
             style={{
-              background: presa ? "#E3F1EE" : "#C81E1E",
-              color: presa ? "#0A4A40" : "#fff",
+              background: bg,
+              color: fg,
               borderRadius: 14,
               padding: "14px 16px",
               marginBottom: 10,
@@ -449,16 +459,18 @@ export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
                 letterSpacing: ".08em",
                 textTransform: "uppercase",
                 fontWeight: 800,
-                background: presa
+                background: fatta
                   ? "rgba(10,74,64,.12)"
-                  : "rgba(255,255,255,.2)",
+                  : inCorso
+                    ? "rgba(138,74,15,.14)"
+                    : "rgba(255,255,255,.2)",
                 display: "inline-block",
                 padding: "3px 9px",
                 borderRadius: 20,
                 marginBottom: 8,
               }}
             >
-              {presa ? "✅ Gestita" : "🚨 Richiesta urgente"}
+              {fatta ? "✅ Gestita" : inCorso ? "🟠 In corso" : "🚨 Richiesta urgente"}
             </div>
             <div style={{ fontSize: 12.5, opacity: 0.9, marginBottom: 8 }}>
               Da {u.createdBy}
@@ -472,22 +484,26 @@ export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
             </div>
             <div
               style={{
-                background: presa ? "rgba(10,74,64,.08)" : "rgba(255,255,255,.15)",
+                background: fatta
+                  ? "rgba(10,74,64,.08)"
+                  : inCorso
+                    ? "rgba(138,74,15,.08)"
+                    : "rgba(255,255,255,.15)",
                 borderRadius: 10,
                 padding: "10px 12px",
                 fontSize: 14,
                 lineHeight: 1.4,
-                marginBottom: presa ? 0 : 12,
+                marginBottom: fatta ? 0 : 12,
               }}
             >
               {u.note}
             </div>
-            {presa ? (
+            {fatta ? (
               <div style={{ fontSize: 12, marginTop: 8, fontWeight: 600 }}>
-                Presa in carico da {u.takenBy}
-                {u.takenAt
+                Fatto da {u.completedBy || u.takenBy}
+                {u.completedAt
                   ? " · " +
-                    new Date(u.takenAt).toLocaleString("it-IT", {
+                    new Date(u.completedAt).toLocaleString("it-IT", {
                       day: "2-digit",
                       month: "2-digit",
                       hour: "2-digit",
@@ -495,6 +511,39 @@ export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
                     })
                   : ""}
               </div>
+            ) : inCorso ? (
+              <>
+                <div style={{ fontSize: 12, marginBottom: canTake ? 8 : 0, fontWeight: 600 }}>
+                  {u.takenBy} sta andando
+                  {u.takenAt
+                    ? " · " +
+                      new Date(u.takenAt).toLocaleString("it-IT", {
+                        day: "2-digit",
+                        month: "2-digit",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })
+                    : ""}
+                </div>
+                {canTake && (
+                  <button
+                    onClick={() => onComplete(u.id)}
+                    style={{
+                      width: "100%",
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "none",
+                      background: "#fff",
+                      color: "#8A4A0F",
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Fatto
+                  </button>
+                )}
+              </>
             ) : canTake ? (
               <button
                 onClick={() => onTake(u.id)}
@@ -510,7 +559,7 @@ export function UrgenzeLog({ urgenze, onTake, canTake = true }) {
                   cursor: "pointer",
                 }}
               >
-                Preso in carico
+                Vado
               </button>
             ) : (
               <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>

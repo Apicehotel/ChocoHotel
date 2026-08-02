@@ -351,6 +351,18 @@ export const DB = {
     if (error) console.error(error);
     return !error;
   },
+  async completaUrgenza(id, nome) {
+    const { error } = await supabase
+      .from("richieste_urgenti")
+      .update({
+        stato: "completata",
+        completata_da: nome,
+        completata_il: new Date().toISOString(),
+      })
+      .eq("id", id);
+    if (error) console.error(error);
+    return !error;
+  },
 
   // ── Presenza in struttura (check-in manuale + rilevamento GPS) ────────────
   // in_struttura_via distingue chi l'ha impostato:
@@ -430,6 +442,10 @@ function urgenzaFromRow(r) {
     takenBy: r.presa_in_carico_da,
     takenAt: r.presa_in_carico_il
       ? new Date(r.presa_in_carico_il).getTime()
+      : null,
+    completedBy: r.completata_da,
+    completedAt: r.completata_il
+      ? new Date(r.completata_il).getTime()
       : null,
   };
 }
