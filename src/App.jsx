@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { createClient } from "@supabase/supabase-js";
 import { DB, supabase, newId } from "./db.js";
 import { resolveCamera, ZONE_NAMES, ROOM_NUMBERS, PIANI } from "./zoneData.js";
 import NotificheSettings, { playNotifSound } from "./NotificheSettings";
@@ -254,6 +255,21 @@ const I = {
     >
       <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
       <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  ),
+  chart: (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M3 3v18h18" />
+      <rect x="7" y="12" width="3" height="6" />
+      <rect x="12" y="8" width="3" height="10" />
+      <rect x="17" y="5" width="3" height="13" />
     </svg>
   ),
   clock: (
@@ -2236,6 +2252,18 @@ export default function App() {
           },
         ]
       : []),
+    ...(user.role === "sviluppatore"
+      ? [
+          {
+            icon: I.chart,
+            label: "Pannello Consumi",
+            fn: () => {
+              setSheet("consumi");
+              setMenuOpen(false);
+            },
+          },
+        ]
+      : []),
     {
       icon: I.lock,
       label: "Cambia PIN",
@@ -3368,6 +3396,9 @@ export default function App() {
             }}
           />
         )}
+      {sheet === "consumi" && user.role === "sviluppatore" && (
+        <PannelloConsumi onClose={() => setSheet(null)} />
+      )}
       {sheet === "wa" && (
         <WACenter
           user={user}
@@ -8695,6 +8726,364 @@ function MyWorkPage({ user, items, planned, onClose, onOpen }) {
     </div>
   );
 } // ── WACenter ──────────────────────────────────────────────────────────────────
+// Client Supabase in sola lettura per il Chocohotel, usato solo qui per
+// mostrare i suoi consumi accanto a quelli di Hotel Giò in un unico posto.
+// Chiave pubblica (publishable), la stessa gia' usata dall'app Chocohotel.
+const chocoSupabase = createClient(
+  "https://ooqlfldcrnkudhgjnied.supabase.co",
+  "sb_publishable_Oiu7IOhuUd6YPEDmmSa7zA_ngNuiSlX",
+);
+
+const LIMITI_FREE = {
+  db: 500 * 1024 * 1024, // 500 MB
+  progetti: 2,
+};
+
+function bytesToMB(b) {
+  return (b / (1024 * 1024)).toFixed(1);
+}
+
+function BarraLimite({ label, valore, limite, unita = "" }) {
+  const pct = Math.min(100, (valore / limite) * 100);
+  const colore = pct > 80 ? "#C81E1E" : pct > 50 ? "#B9762A" : "#0F6B5C";
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          fontSize: 12.5,
+          marginBottom: 4,
+        }}
+      >
+        <span style={{ color: "#5C645E" }}>{label}</span>
+        <span style={{ fontWeight: 700 }}>
+          {valore}
+          {unita} / {limite}
+          {unita}
+        </span>
+      </div>
+      <div
+        style={{
+          height: 8,
+          background: "#EEEBE3",
+          borderRadius: 999,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            width: pct + "%",
+            height: "100%",
+            background: colore,
+            borderRadius: 999,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function CardConsumo({ titolo, children }) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: "1px solid #E4E0D6",
+        borderRadius: 14,
+        padding: 16,
+        marginBottom: 12,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 13,
+          fontWeight: 800,
+          color: "#0A4A40",
+          marginBottom: 12,
+          textTransform: "uppercase",
+          letterSpacing: 0.4,
+        }}
+      >
+        {titolo}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function RigaStat({ label, valore }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        fontSize: 13.5,
+        padding: "6px 0",
+        borderBottom: "1px solid #F0EDE5",
+      }}
+    >
+      <span style={{ color: "#5C645E" }}>{label}</span>
+      <span style={{ fontWeight: 700 }}>{valore}</span>
+    </div>
+  );
+}
+
+function PannelloConsumi({ onClose }) {
+  const [gio, setGio] = useState(null);
+  const [choco, setChoco] = useState(null);
+  const [twilio, setTwilio] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [errore, setErrore] = useState(null);
+
+  const carica = useCallback(async () => {
+    setLoading(true);
+    setErrore(null);
+    try {
+      const [gioRes, chocoRes, twilioRes] = await Promise.all([
+        supabase.rpc("get_usage_stats"),
+        chocoSupabase.rpc("get_usage_stats"),
+        fetch(
+          "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/check-twilio-usage",
+        ).then((r) => r.json()),
+      ]);
+      setGio(gioRes.data);
+      setChoco(chocoRes.data);
+      setTwilio(twilioRes);
+    } catch (e) {
+      setErrore("Errore nel caricamento: " + String(e));
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    carica();
+  }, [carica]);
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#F7F5F0",
+        zIndex: 100,
+        overflowY: "auto",
+      }}
+    >
+      <div
+        style={{
+          background: "#0A4A40",
+          color: "#fff",
+          padding: "16px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+        }}
+      >
+        <div style={{ fontWeight: 800, fontSize: 16 }}>📊 Pannello Consumi</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={carica}
+            style={{
+              background: "rgba(255,255,255,.15)",
+              border: "none",
+              color: "#fff",
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+            }}
+          >
+            ↻ Aggiorna
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#fff",
+              fontSize: 20,
+              cursor: "pointer",
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: 16 }}>
+        {loading && (
+          <div style={{ textAlign: "center", padding: 40, color: "#5C645E" }}>
+            Carico i dati in tempo reale...
+          </div>
+        )}
+        {errore && (
+          <div
+            style={{
+              background: "#FDEAEA",
+              color: "#8A0F0F",
+              padding: 12,
+              borderRadius: 10,
+              marginBottom: 12,
+              fontSize: 13,
+            }}
+          >
+            {errore}
+          </div>
+        )}
+
+        {!loading && (
+          <>
+            <CardConsumo titolo="Supabase — Hotel Giò">
+              {gio ? (
+                <>
+                  <BarraLimite
+                    label="Database"
+                    valore={bytesToMB(gio.db_size_bytes)}
+                    limite={bytesToMB(LIMITI_FREE.db)}
+                    unita=" MB"
+                  />
+                  <RigaStat label="Utenti" valore={gio.utenti} />
+                  <RigaStat label="Segnalazioni" valore={gio.segnalazioni} />
+                  <RigaStat label="Interventi" valore={gio.interventi} />
+                  <RigaStat
+                    label="Richieste urgenti"
+                    valore={gio.richieste_urgenti}
+                  />
+                  <RigaStat
+                    label="Iscrizioni push attive"
+                    valore={gio.push_subscriptions}
+                  />
+                </>
+              ) : (
+                <div style={{ color: "#8A9490", fontSize: 13 }}>
+                  Non disponibile
+                </div>
+              )}
+            </CardConsumo>
+
+            <CardConsumo titolo="Supabase — Chocohotel">
+              {choco ? (
+                <>
+                  <BarraLimite
+                    label="Database"
+                    valore={bytesToMB(choco.db_size_bytes)}
+                    limite={bytesToMB(LIMITI_FREE.db)}
+                    unita=" MB"
+                  />
+                  <RigaStat label="Utenti" valore={choco.utenti} />
+                  <RigaStat label="Segnalazioni" valore={choco.segnalazioni} />
+                  <RigaStat label="Interventi" valore={choco.interventi} />
+                  <RigaStat
+                    label="Richieste urgenti"
+                    valore={choco.richieste_urgenti}
+                  />
+                  <RigaStat
+                    label="Iscrizioni push attive"
+                    valore={choco.push_subscriptions}
+                  />
+                </>
+              ) : (
+                <div style={{ color: "#8A9490", fontSize: 13 }}>
+                  Non disponibile
+                </div>
+              )}
+              <div
+                style={{
+                  fontSize: 11.5,
+                  color: "#8A9490",
+                  marginTop: 10,
+                  paddingTop: 10,
+                  borderTop: "1px solid #F0EDE5",
+                }}
+              >
+                Piano Free: 2 progetti su 2 disponibili in uso (Hotel Giò +
+                Chocohotel) — un terzo progetto richiederebbe l'upgrade a Pro.
+              </div>
+            </CardConsumo>
+
+            <CardConsumo titolo="Twilio (WhatsApp)">
+              {twilio ? (
+                <>
+                  <RigaStat
+                    label="Saldo residuo"
+                    valore={`$${twilio.saldo} ${twilio.valuta}`}
+                  />
+                  <RigaStat
+                    label="Messaggi inviati (30gg)"
+                    valore={twilio.messaggi_ultimi_30gg?.inviati ?? "—"}
+                  />
+                  <RigaStat
+                    label="Messaggi ricevuti (30gg)"
+                    valore={twilio.messaggi_ultimi_30gg?.ricevuti ?? "—"}
+                  />
+                  <RigaStat
+                    label="Totale (30gg)"
+                    valore={twilio.messaggi_ultimi_30gg?.totale ?? "—"}
+                  />
+                  {twilio.utilizzo_mese_corrente?.length > 0 ? (
+                    <div style={{ marginTop: 10 }}>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          color: "#5C645E",
+                          marginBottom: 6,
+                        }}
+                      >
+                        COSTI QUESTO MESE
+                      </div>
+                      {twilio.utilizzo_mese_corrente.map((u, i) => (
+                        <RigaStat
+                          key={i}
+                          label={u.descrizione}
+                          valore={`${u.conteggio} ${u.unita} · $${u.prezzo}`}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <div
+                      style={{ fontSize: 12, color: "#8A9490", marginTop: 8 }}
+                    >
+                      Nessun costo registrato questo mese.
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ color: "#8A9490", fontSize: 13 }}>
+                  Non disponibile
+                </div>
+              )}
+            </CardConsumo>
+
+            <CardConsumo titolo="Vercel">
+              <div style={{ fontSize: 13, color: "#5C645E", lineHeight: 1.5 }}>
+                Banda e minuti di build non sono leggibili da qui (nessun
+                accesso API dall'app). Controlla su{" "}
+                <a
+                  href="https://vercel.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "#0F6B5C", fontWeight: 700 }}
+                >
+                  vercel.com → progetto → Usage
+                </a>
+                .
+              </div>
+            </CardConsumo>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function WACenter({ user, items, onClose, onSave }) {
   const [text, setText] = useState("");
   const [sender, setSender] = useState("reception");
