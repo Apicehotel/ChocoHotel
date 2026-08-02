@@ -214,6 +214,7 @@ export const DB = {
       pin: u.pin,
       zones: u.zone_consentite || [],
       mustChangePin: !!u.deve_cambiare_pin,
+      telefono: u.telefono || "",
     }));
   },
   async saveUsers(users) {
@@ -229,6 +230,7 @@ export const DB = {
         pin: u.pin,
         zone_consentite: u.zones || null,
         deve_cambiare_pin: u.mustChangePin || false,
+        telefono: u.telefono || null,
       }));
       const { error } = await supabase.from("utenti").insert(rows);
       if (error) console.error(error);
@@ -244,6 +246,7 @@ export const DB = {
       pin: u.pin,
       zone_consentite: u.zones || null,
       deve_cambiare_pin: u.mustChangePin || false,
+      telefono: u.telefono || null,
     };
     const { error } = await supabase.from("utenti").insert(row);
     if (error) console.error(error);

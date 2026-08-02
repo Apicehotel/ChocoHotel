@@ -1878,6 +1878,19 @@ export default function App() {
         },
       );
     } catch {}
+    // WhatsApp e' un canale IN PIU', solo per chi risulta in struttura in
+    // quel momento (a mano o via GPS): non sostituisce la push, che va
+    // comunque a tutti i manutentori attivi come rete di sicurezza.
+    try {
+      await fetch(
+        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-urgenza-whatsapp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nota, mittente: user.name }),
+        },
+      );
+    } catch {}
   };
   const prendiUrgenza = async (id) => {
     await DB.prendiUrgenza(id, user.name);
@@ -7314,6 +7327,7 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState("manutentore");
   const [newPin, setNewPin] = useState("");
+  const [newTelefono, setNewTelefono] = useState("");
   const [areaSubtype, setAreaSubtype] = useState(null);
   const [newAreaZones, setNewAreaZones] = useState("");
   const [newAPin, setNewAPin] = useState("");
@@ -7347,6 +7361,7 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
         : null;
     const nu = { id: uid(), name: newName.trim(), role: newRole, pin: newPin };
     if (zonesArr && zonesArr.length) nu.zones = zonesArr;
+    if (newTelefono.trim()) nu.telefono = newTelefono.trim();
     // scrittura mirata: aggiunge solo questo utente, non riscrive tutta la
     // tabella (altrimenti si rischia di sovrascrivere PIN cambiati da altri
     // nel frattempo con la lista "vecchia" caricata all'apertura del pannello)
@@ -7357,6 +7372,7 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
     setShowForm(false);
     setNewName("");
     setNewPin("");
+    setNewTelefono("");
     setAreaSubtype(null);
     setNewAreaZones("");
     setDevPin("");
@@ -7606,6 +7622,24 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 autoFocus
+              />
+            </div>{" "}
+            <div style={{ marginBottom: 12 }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginBottom: 6,
+                }}
+              >
+                Telefono (opzionale)
+              </label>
+              <input
+                style={inputSt}
+                placeholder="es. +39 333 1234567"
+                value={newTelefono}
+                onChange={(e) => setNewTelefono(e.target.value)}
               />
             </div>{" "}
             <div style={{ marginBottom: 12 }}>
