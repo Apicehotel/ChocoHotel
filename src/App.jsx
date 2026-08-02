@@ -1878,19 +1878,9 @@ export default function App() {
         },
       );
     } catch {}
-    // WhatsApp e' un canale IN PIU', solo per chi risulta in struttura in
-    // quel momento (a mano o via GPS): non sostituisce la push, che va
-    // comunque a tutti i manutentori attivi come rete di sicurezza.
-    try {
-      await fetch(
-        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-urgenza-whatsapp",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nota, mittente: user.name }),
-        },
-      );
-    } catch {}
+    // Il WhatsApp NON parte subito: un controllo lato server (pg_cron,
+    // ogni minuto) lo manda solo se dopo 3 minuti nessuno ha ancora
+    // toccato "Vado" — vedi controlla_whatsapp_urgenze() su Supabase.
   };
   const prendiUrgenza = async (id) => {
     await DB.prendiUrgenza(id, user.name);
