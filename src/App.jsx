@@ -4774,37 +4774,97 @@ function PlannedDetail({
                   }}
                 />
               </div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {p.rooms.map((r) => {
-                  const d = roomsDone[r];
-                  return (
-                    <button
-                      key={r}
-                      onClick={() => toggleRoom(r)}
-                      title={
-                        d
-                          ? "Fatta da " + d.by
-                          : canTick
-                            ? "Tocca per spuntare"
-                            : "Solo chi esegue l'intervento puo' spuntare"
-                      }
-                      style={{
-                        minWidth: 54,
-                        padding: "9px 6px",
-                        borderRadius: 10,
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: canTick ? "pointer" : "default",
-                        border: "1.5px solid " + (d ? "#0891B2" : "#E4E0D6"),
-                        background: d ? "#0891B2" : "#fff",
-                        color: d ? "#fff" : "#5C645E",
-                      }}
-                    >
-                      {r}
-                    </button>
+              {p.category === "extrapiani" ? (
+                PIANI.map((pi) => {
+                  const roomsQuiPiano = pi.rooms.filter((r) =>
+                    p.rooms.includes(r),
                   );
-                })}
-              </div>
+                  if (!roomsQuiPiano.length) return null;
+                  const doneQuiPiano = roomsQuiPiano.filter(
+                    (r) => roomsDone[r],
+                  ).length;
+                  return (
+                    <div key={pi.id} style={{ marginBottom: 14 }}>
+                      <div
+                        style={{
+                          fontSize: 11.5,
+                          fontWeight: 700,
+                          color: "#8A5A1F",
+                          textTransform: "uppercase",
+                          letterSpacing: 0.4,
+                          marginBottom: 6,
+                        }}
+                      >
+                        {pi.label} · {doneQuiPiano}/{roomsQuiPiano.length}
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {roomsQuiPiano.map((r) => {
+                          const d = roomsDone[r];
+                          return (
+                            <button
+                              key={r}
+                              onClick={() => toggleRoom(r)}
+                              title={
+                                d
+                                  ? "Fatta da " + d.by
+                                  : canTick
+                                    ? "Tocca per spuntare"
+                                    : "Solo chi esegue l'intervento puo' spuntare"
+                              }
+                              style={{
+                                minWidth: 54,
+                                padding: "9px 6px",
+                                borderRadius: 10,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                cursor: canTick ? "pointer" : "default",
+                                border:
+                                  "1.5px solid " + (d ? "#B9762A" : "#E4E0D6"),
+                                background: d ? "#B9762A" : "#fff",
+                                color: d ? "#fff" : "#5C645E",
+                              }}
+                            >
+                              {r}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {p.rooms.map((r) => {
+                    const d = roomsDone[r];
+                    return (
+                      <button
+                        key={r}
+                        onClick={() => toggleRoom(r)}
+                        title={
+                          d
+                            ? "Fatta da " + d.by
+                            : canTick
+                              ? "Tocca per spuntare"
+                              : "Solo chi esegue l'intervento puo' spuntare"
+                        }
+                        style={{
+                          minWidth: 54,
+                          padding: "9px 6px",
+                          borderRadius: 10,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: canTick ? "pointer" : "default",
+                          border: "1.5px solid " + (d ? "#0891B2" : "#E4E0D6"),
+                          background: d ? "#0891B2" : "#fff",
+                          color: d ? "#fff" : "#5C645E",
+                        }}
+                      >
+                        {r}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {canTick && doneCount > 0 && (
                 <div style={{ fontSize: 11, color: "#5C645E", marginTop: 8 }}>
                   Tocca di nuovo una camera per togliere la spunta.
