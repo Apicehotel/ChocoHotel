@@ -125,8 +125,8 @@ self.addEventListener('push', (event) => {
   const urgent = !!data.urgent;
   const options = {
     body: data.body || '',
-    icon: '/favicon-192.png',
-    badge: '/favicon-192.png',
+    icon: urgent ? '/favicon-urgente-192.png' : '/favicon-192.png',
+    badge: urgent ? '/favicon-urgente-192.png' : '/favicon-192.png',
     tag: data.tag,
     renotify: !!data.tag,
     data: { url: data.url || '/', urgent },
