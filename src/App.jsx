@@ -4316,11 +4316,29 @@ function NewPlanned({ user, tec, onClose, onSave }) {
               padding: "12px 14px",
               fontSize: 13,
               color: "#8A5A1F",
+              marginBottom: 8,
             }}
           >
             {camereExtraPiani.length} camere da spuntare — tutti i piani, Jazz
-            e Wine insieme (dalla {camereExtraPiani[0]} alla{" "}
-            {camereExtraPiani[camereExtraPiani.length - 1]})
+            e Wine insieme
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {PIANI.map((pi) => (
+              <div
+                key={pi.id}
+                style={{
+                  padding: "6px 10px",
+                  borderRadius: 9,
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  background: "#fff",
+                  border: "1px solid #E4E0D6",
+                  color: "#5C645E",
+                }}
+              >
+                {pi.label} · {pi.rooms.length}
+              </div>
+            ))}
           </div>
         </Field>
       ) : isFiltri ? (
