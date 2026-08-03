@@ -521,6 +521,7 @@ const CAT = {
   giardinaggio: { label: "Giardinaggio", icon: "leaf", color: "#16A34A" },
   filtri: { label: "Pulizia filtri", icon: "wind", color: "#0891B2" },
   idromassaggio: { label: "Idromassaggio", icon: "droplet", color: "#7C5CFC" },
+  extrapiani: { label: "Extra Piani", icon: "hotel", color: "#B9762A" },
   varie: { label: "Varie", icon: "wrench", color: "#6B7280" },
 };
 const ROOM_ST = {
@@ -4199,6 +4200,7 @@ function NewPlanned({ user, tec, onClose, onSave }) {
   const camInvalid = !!(camCheck && !camCheck.ok);
   const camResolved = camCheck && camCheck.ok ? camCheck.value : null;
   const isFiltri = cat === "filtri" || cat === "idromassaggio";
+  const isExtraPiani = cat === "extrapiani";
   const pianiDisponibili =
     cat === "idromassaggio" ? PIANI.filter((pi) => pi.id.startsWith("jazz")) : PIANI;
   useEffect(() => {
@@ -4211,9 +4213,14 @@ function NewPlanned({ user, tec, onClose, onSave }) {
       ? piano.rooms.filter((r) => Number(r) % 2 === 0)
       : piano.rooms
     : [];
-  const canSave = isFiltri
-    ? !!piano && dt && assignees.length > 0
-    : roomTrim && notes.trim() && dt && assignees.length > 0 && !camInvalid;
+  // Extra Piani: tutte le camere di Jazz e Wine insieme, nessuna selezione
+  // piano necessaria (copre gia' tutto).
+  const camereExtraPiani = ROOM_NUMBER_LIST;
+  const canSave = isExtraPiani
+    ? dt && assignees.length > 0
+    : isFiltri
+      ? !!piano && dt && assignees.length > 0
+      : roomTrim && notes.trim() && dt && assignees.length > 0 && !camInvalid;
   const AssigneeRow = ({ u, accent }) => {
     const sel = assignees.some((a) => a.id === u.id);
     return (
@@ -4299,7 +4306,24 @@ function NewPlanned({ user, tec, onClose, onSave }) {
   return (
     <Sheet onClose={onClose} title="Nuovo intervento pianificato">
       {" "}
-      {isFiltri ? (
+      {isExtraPiani ? (
+        <Field label="Camere">
+          <div
+            style={{
+              background: "#B9762A11",
+              border: "1.5px solid #B9762A33",
+              borderRadius: 11,
+              padding: "12px 14px",
+              fontSize: 13,
+              color: "#8A5A1F",
+            }}
+          >
+            {camereExtraPiani.length} camere da spuntare — tutti i piani, Jazz
+            e Wine insieme (dalla {camereExtraPiani[0]} alla{" "}
+            {camereExtraPiani[camereExtraPiani.length - 1]})
+          </div>
+        </Field>
+      ) : isFiltri ? (
         <Field label="Piano *">
           <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
             {pianiDisponibili.map((pi) => {
@@ -4470,11 +4494,17 @@ function NewPlanned({ user, tec, onClose, onSave }) {
         onClick={() =>
           onSave({
             id: uid(),
-            room: isFiltri ? piano.label : camResolved || roomTrim,
+            room: isExtraPiani
+              ? "Extra Piani"
+              : isFiltri
+                ? piano.label
+                : camResolved || roomTrim,
             category: cat,
-            notes: isFiltri
-              ? notes.trim() || CAT[cat].label + " " + piano.label
-              : notes.trim(),
+            notes: isExtraPiani
+              ? notes.trim() || "Extra Piani — tutte le camere Jazz e Wine"
+              : isFiltri
+                ? notes.trim() || CAT[cat].label + " " + piano.label
+                : notes.trim(),
             scheduledAt: dt ? new Date(dt).getTime() : null,
             assignees,
             status: "pending",
@@ -4482,7 +4512,11 @@ function NewPlanned({ user, tec, onClose, onSave }) {
             createdAt: Date.now(),
             completedBy: null,
             completedAt: null,
-            rooms: isFiltri ? camereDelPiano : null,
+            rooms: isExtraPiani
+              ? camereExtraPiani
+              : isFiltri
+                ? camereDelPiano
+                : null,
             roomsDone: {},
           })
         }
