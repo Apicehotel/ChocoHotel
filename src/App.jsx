@@ -4171,6 +4171,8 @@ function NewPlanned({ user, tec, onClose, onSave }) {
   const [piano, setPiano] = useState(null);
   const [notes, setNotes] = useState("");
   const [dt, setDt] = useState("");
+  const [dtTo, setDtTo] = useState("");
+  const [pianiSelezionati, setPianiSelezionati] = useState([]);
   const [assignees, setAssignees] = useState([]);
   const [users, setUsers] = useState([]);
   useEffect(() => {
@@ -4213,11 +4215,16 @@ function NewPlanned({ user, tec, onClose, onSave }) {
       ? piano.rooms.filter((r) => Number(r) % 2 === 0)
       : piano.rooms
     : [];
-  // Extra Piani: tutte le camere di Jazz e Wine insieme, nessuna selezione
-  // piano necessaria (copre gia' tutto).
-  const camereExtraPiani = ROOM_NUMBER_LIST;
+  // Extra Piani: solo i piani scelti da chi crea l'intervento, non tutti in automatico.
+  const camereExtraPiani = PIANI.filter((pi) =>
+    pianiSelezionati.includes(pi.id),
+  ).flatMap((pi) => pi.rooms);
+  const togglePiano = (id) =>
+    setPianiSelezionati((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    );
   const canSave = isExtraPiani
-    ? dt && assignees.length > 0
+    ? pianiSelezionati.length > 0 && dt && dtTo && assignees.length > 0
     : isFiltri
       ? !!piano && dt && assignees.length > 0
       : roomTrim && notes.trim() && dt && assignees.length > 0 && !camInvalid;
@@ -4307,39 +4314,37 @@ function NewPlanned({ user, tec, onClose, onSave }) {
     <Sheet onClose={onClose} title="Nuovo intervento pianificato">
       {" "}
       {isExtraPiani ? (
-        <Field label="Camere">
-          <div
-            style={{
-              background: "#B9762A11",
-              border: "1.5px solid #B9762A33",
-              borderRadius: 11,
-              padding: "12px 14px",
-              fontSize: 13,
-              color: "#8A5A1F",
-              marginBottom: 8,
-            }}
-          >
-            {camereExtraPiani.length} camere da spuntare — tutti i piani, Jazz
-            e Wine insieme
+        <Field label="Piani *">
+          <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+            {PIANI.map((pi) => {
+              const sel = pianiSelezionati.includes(pi.id);
+              return (
+                <button
+                  key={pi.id}
+                  onClick={() => togglePiano(pi.id)}
+                  style={{
+                    padding: "9px 13px",
+                    borderRadius: 11,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    border: "1.5px solid " + (sel ? "#B9762A" : "#E4E0D6"),
+                    background: sel ? "#B9762A11" : "#fff",
+                    color: sel ? "#8A5A1F" : "#5C645E",
+                  }}
+                >
+                  {sel ? "✓ " : ""}
+                  {pi.label} · {pi.rooms.length}
+                </button>
+              );
+            })}
           </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {PIANI.map((pi) => (
-              <div
-                key={pi.id}
-                style={{
-                  padding: "6px 10px",
-                  borderRadius: 9,
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  background: "#fff",
-                  border: "1px solid #E4E0D6",
-                  color: "#5C645E",
-                }}
-              >
-                {pi.label} · {pi.rooms.length}
-              </div>
-            ))}
-          </div>
+          {pianiSelezionati.length > 0 && (
+            <div style={{ fontSize: 12, color: "#8A5A1F", marginTop: 8 }}>
+              {camereExtraPiani.length} camere da spuntare sui{" "}
+              {pianiSelezionati.length} piani scelti
+            </div>
+          )}
         </Field>
       ) : isFiltri ? (
         <Field label="Piano *">
@@ -4433,15 +4438,59 @@ function NewPlanned({ user, tec, onClose, onSave }) {
           onChange={(e) => setNotes(e.target.value)}
         />{" "}
       </Field>{" "}
-      <Field label="Data e ora prevista *">
-        {" "}
-        <input
-          style={inputSt}
-          type="datetime-local"
-          value={dt}
-          onChange={(e) => setDt(e.target.value)}
-        />{" "}
-      </Field>{" "}
+      {isExtraPiani ? (
+        <Field label="Periodo *">
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  fontSize: 11.5,
+                  color: "#8A9490",
+                  display: "block",
+                  marginBottom: 4,
+                }}
+              >
+                Da
+              </label>
+              <input
+                style={inputSt}
+                type="date"
+                value={dt}
+                onChange={(e) => setDt(e.target.value)}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label
+                style={{
+                  fontSize: 11.5,
+                  color: "#8A9490",
+                  display: "block",
+                  marginBottom: 4,
+                }}
+              >
+                A
+              </label>
+              <input
+                style={inputSt}
+                type="date"
+                value={dtTo}
+                min={dt || undefined}
+                onChange={(e) => setDtTo(e.target.value)}
+              />
+            </div>
+          </div>
+        </Field>
+      ) : (
+        <Field label="Data e ora prevista *">
+          {" "}
+          <input
+            style={inputSt}
+            type="datetime-local"
+            value={dt}
+            onChange={(e) => setDt(e.target.value)}
+          />{" "}
+        </Field>
+      )}{" "}
       <Field label="Assegna a *">
         {" "}
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -4513,17 +4562,26 @@ function NewPlanned({ user, tec, onClose, onSave }) {
           onSave({
             id: uid(),
             room: isExtraPiani
-              ? "Extra Piani"
+              ? PIANI.filter((pi) => pianiSelezionati.includes(pi.id))
+                  .map((pi) => pi.label)
+                  .join(", ")
               : isFiltri
                 ? piano.label
                 : camResolved || roomTrim,
             category: cat,
             notes: isExtraPiani
-              ? notes.trim() || "Extra Piani — tutte le camere Jazz e Wine"
+              ? notes.trim() ||
+                "Extra Piani — " +
+                  PIANI.filter((pi) => pianiSelezionati.includes(pi.id))
+                    .map((pi) => pi.label)
+                    .join(", ")
               : isFiltri
                 ? notes.trim() || CAT[cat].label + " " + piano.label
                 : notes.trim(),
-            scheduledAt: dt ? new Date(dt).getTime() : null,
+            scheduledAt: dt
+              ? new Date(isExtraPiani ? dt + "T00:00" : dt).getTime()
+              : null,
+            scheduledUntil: isExtraPiani && dtTo ? new Date(dtTo + "T23:59").getTime() : null,
             assignees,
             status: "pending",
             createdBy: user.name,
@@ -4905,7 +4963,7 @@ function PlannedDetail({
         "#BFDBFE",
         <>
           {" "}
-          {dlbl("Data prevista", "#1D4ED8")}{" "}
+          {dlbl(p.scheduledUntil ? "Periodo previsto" : "Data prevista", "#1D4ED8")}{" "}
           <div
             style={{
               fontSize: 15,
@@ -4918,7 +4976,11 @@ function PlannedDetail({
           >
             {" "}
             {I.clock16}{" "}
-            {p.scheduledAt ? fmtDate(p.scheduledAt) : "Non impostata"}{" "}
+            {p.scheduledAt
+              ? p.scheduledUntil
+                ? `Dal ${fmtDate(p.scheduledAt)} al ${fmtDate(p.scheduledUntil)}`
+                : fmtDate(p.scheduledAt)
+              : "Non impostata"}{" "}
           </div>{" "}
         </>,
       )}{" "}
