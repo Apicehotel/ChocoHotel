@@ -2304,6 +2304,18 @@ export default function App() {
           },
         ]
       : []),
+    ...(user.role === "sviluppatore" || user.role === "direzione"
+      ? [
+          {
+            icon: I.droplet,
+            label: "Sensori Temperatura",
+            fn: () => {
+              setSheet("sensori");
+              setMenuOpen(false);
+            },
+          },
+        ]
+      : []),
     {
       icon: I.lock,
       label: "Cambia PIN",
@@ -3511,6 +3523,10 @@ export default function App() {
       {sheet === "consumi" && user.role === "sviluppatore" && (
         <PannelloConsumi onClose={() => setSheet(null)} />
       )}
+      {sheet === "sensori" &&
+        (user.role === "sviluppatore" || user.role === "direzione") && (
+          <SensoriTemperatura onClose={() => setSheet(null)} />
+        )}
       {sheet === "wa" && (
         <WACenter
           user={user}
@@ -9592,6 +9608,171 @@ function PannelloConsumi({ onClose }) {
   );
 }
 
+
+function SensoriTemperatura({ onClose }) {
+  const [sensori, setSensori] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+  const carica = useCallback(async () => {
+    setLoading(true);
+    const { data } = await supabase
+      .from("sensori_temperatura")
+      .select("*")
+      .order("nome");
+    setSensori(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    carica();
+    const ch = supabase
+      .channel("sensori-temp-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "sensori_temperatura" },
+        () => carica(),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [carica]);
+
+  const sincronizzaOra = async () => {
+    setSyncing(true);
+    try {
+      await fetch(
+        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/sync-sensori-temperatura",
+        { method: "POST" },
+      );
+    } catch {}
+    await carica();
+    setSyncing(false);
+  };
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "#F7F5F0",
+        zIndex: 100,
+        overflowY: "auto",
+      }}
+    >
+      <div
+        style={{
+          background: "#0A4A40",
+          color: "#fff",
+          padding: "16px 16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          position: "sticky",
+          top: 0,
+          zIndex: 1,
+        }}
+      >
+        <div style={{ fontWeight: 800, fontSize: 16 }}>
+          🌡️ Sensori Temperatura
+        </div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button
+            onClick={sincronizzaOra}
+            disabled={syncing}
+            style={{
+              background: "rgba(255,255,255,.15)",
+              border: "none",
+              color: "#fff",
+              borderRadius: 8,
+              padding: "6px 12px",
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              opacity: syncing ? 0.6 : 1,
+            }}
+          >
+            {syncing ? "..." : "↻ Aggiorna"}
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#fff",
+              fontSize: 20,
+              cursor: "pointer",
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      <div style={{ maxWidth: 600, margin: "0 auto", padding: 16 }}>
+        <div style={{ fontSize: 12, color: "#8A9490", marginBottom: 14 }}>
+          Aggiornate automaticamente ogni 15 minuti · account eWeLink dedicato
+          con solo questi sensori condivisi.
+        </div>
+        {loading ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#5C645E" }}>
+            Carico...
+          </div>
+        ) : sensori.length === 0 ? (
+          <div style={{ textAlign: "center", padding: 40, color: "#5C645E" }}>
+            Nessun sensore ancora sincronizzato.
+          </div>
+        ) : (
+          sensori.map((s) => {
+            const temp = s.temperatura != null ? parseFloat(s.temperatura) : null;
+            const colore =
+              !s.online
+                ? "#8A9490"
+                : temp == null
+                  ? "#8A9490"
+                  : temp < 0
+                    ? "#2563EB"
+                    : temp > 30
+                      ? "#C81E1E"
+                      : "#0F6B5C";
+            return (
+              <div
+                key={s.device_id}
+                style={{
+                  background: "#fff",
+                  border: "1px solid #E4E0D6",
+                  borderRadius: 14,
+                  padding: "14px 16px",
+                  marginBottom: 10,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {s.nome?.trim()}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#8A9490", marginTop: 2 }}>
+                    {s.online ? "online" : "⚠️ offline"} · agg.{" "}
+                    {new Date(s.aggiornato_il).toLocaleTimeString("it-IT", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+                <div
+                  style={{ fontSize: 22, fontWeight: 800, color: colore }}
+                >
+                  {temp != null ? `${temp}°C` : "—"}
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
 
 function WACenter({ user, items, onClose, onSave }) {
   const [text, setText] = useState("");
