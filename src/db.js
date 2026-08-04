@@ -430,6 +430,35 @@ export const DB = {
     }
     return data;
   },
+
+  // ── Camere pulite oggi (Governante segna, Reception/Direzione controllano) ──
+  // La presenza di una riga = camera fatta. Si svuota da sola ogni notte
+  // alle 23:59 (pg_cron), niente reset manuale da fare.
+  async loadCamerePulite() {
+    const { data, error } = await supabase
+      .from("camere_pulite_oggi")
+      .select("camera, fatta_da, fatta_il");
+    if (error) {
+      console.error(error);
+      return [];
+    }
+    return data;
+  },
+  async segnaCameraPulita(camera, nome) {
+    const { error } = await supabase
+      .from("camere_pulite_oggi")
+      .upsert({ camera, fatta_da: nome, fatta_il: new Date().toISOString() });
+    if (error) console.error(error);
+    return !error;
+  },
+  async rimuoviCameraPulita(camera) {
+    const { error } = await supabase
+      .from("camere_pulite_oggi")
+      .delete()
+      .eq("camera", camera);
+    if (error) console.error(error);
+    return !error;
+  },
 };
 
 // UID per nuovi record (Supabase genera comunque il suo, ma serve per la UI)

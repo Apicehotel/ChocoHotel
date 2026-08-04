@@ -1824,6 +1824,7 @@ export default function App() {
   const [myWorkOpen, setMyWorkOpen] = useState(false);
   const [planningOpen, setPlanningOpen] = useState(false);
   const [urgenze, setUrgenze] = useState([]);
+  const [camerePulite, setCamerePulite] = useState([]); // [{camera, fatta_da, fatta_il}]
   // Badge rosso con contatore sull'icona dell'app (come nelle app native),
   // non solo nella notifica push: Badging API, supportata da iOS 16.4+ e
   // Chrome/Android per PWA installate. Se il browser non la supporta non
@@ -1885,6 +1886,18 @@ export default function App() {
   const refreshUrgenze = useCallback(async () => {
     setUrgenze(await DB.loadUrgenze());
   }, []);
+  const refreshCamerePulite = useCallback(async () => {
+    setCamerePulite(await DB.loadCamerePulite());
+  }, []);
+  const toggleCameraPulita = async (camera) => {
+    const gia = camerePulite.some((c) => c.camera === camera);
+    if (gia) {
+      await DB.rimuoviCameraPulita(camera);
+    } else {
+      await DB.segnaCameraPulita(camera, user.name);
+    }
+    await refreshCamerePulite();
+  };
   const sendUrgenza = async (nota) => {
     await DB.addUrgenza(nota, user.name);
     await refreshUrgenze();
@@ -2008,7 +2021,7 @@ export default function App() {
     let mounted = true;
     (async () => {
       setLoading(true);
-      await Promise.all([refresh(), refreshUrgenze()]);
+      await Promise.all([refresh(), refreshUrgenze(), refreshCamerePulite()]);
       if (mounted) setLoading(false);
     })();
     // Realtime: aggiorna quando altri dispositivi cambiano i dati
@@ -2043,12 +2056,17 @@ export default function App() {
           refreshUrgenze();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "camere_pulite_oggi" },
+        () => refreshCamerePulite(),
+      )
       .subscribe();
     return () => {
       mounted = false;
       supabase.removeChannel(ch);
     };
-  }, [user, refresh, refreshUrgenze]);
+  }, [user, refresh, refreshUrgenze, refreshCamerePulite]);
 
   useEffect(() => {
     const on = () => setIsOffline(false),
@@ -2214,6 +2232,12 @@ export default function App() {
     isGestione || user.role === "manutentore";
   // ruoli che vedono il Planning Sale
   const vedePlanning = vedeInterventi;
+  // camere pulite oggi: governante (spuntano), reception/direzione (controllano)
+  const vedePulizie =
+    user.role === "governante" ||
+    user.role === "reception" ||
+    user.role === "direzione" ||
+    user.role === "sviluppatore";
 
   const menuItems = [
     {
@@ -2478,6 +2502,9 @@ export default function App() {
               : []),
             ...(vedeInterventi
               ? [["interventi", "Interventi", cntPlan.pending]]
+              : []),
+            ...(vedePulizie
+              ? [["camere", "Camere", camerePulite.length]]
               : []),
           ].map(([k, l, n]) => (
             <button
@@ -3127,6 +3154,71 @@ export default function App() {
               </>
             );
           })()}
+        </main>
+      )}
+      {/* ===== TAB: CAMERE (pulizie del giorno) ===== */}
+      {tab === "camere" && vedePulizie && (
+        <main
+          style={{ maxWidth: 760, margin: "0 auto", padding: "14px 14px 90px" }}
+        >
+          <div
+            style={{
+              fontSize: 12.5,
+              color: "#5C645E",
+              marginBottom: 14,
+              lineHeight: 1.4,
+            }}
+          >
+            Tocca una camera per segnarla fatta (diventa verde). Si azzera da
+            sola ogni notte alle 23:59 — {camerePulite.length} fatte oggi su{" "}
+            {ROOM_NUMBER_LIST.length}.
+          </div>
+          {PIANI.map((pi) => {
+            const fatteQuiPiano = pi.rooms.filter((r) =>
+              camerePulite.some((c) => c.camera === r),
+            ).length;
+            return (
+              <div key={pi.id} style={{ marginBottom: 18 }}>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: "#0A4A40",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.4,
+                    marginBottom: 7,
+                  }}
+                >
+                  {pi.label} · {fatteQuiPiano}/{pi.rooms.length}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {pi.rooms.map((r) => {
+                    const rec = camerePulite.find((c) => c.camera === r);
+                    return (
+                      <button
+                        key={r}
+                        onClick={() => toggleCameraPulita(r)}
+                        title={rec ? `Fatta da ${rec.fatta_da}` : "Tocca per segnare fatta"}
+                        style={{
+                          minWidth: 54,
+                          padding: "9px 6px",
+                          borderRadius: 10,
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          border: "1.5px solid " + (rec ? "#16A34A" : "#E4E0D6"),
+                          background: rec ? "#16A34A" : "#fff",
+                          color: rec ? "#fff" : "#5C645E",
+                        }}
+                      >
+                        {r}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </main>
       )}
       {/* ===== TAB: INTERVENTI PIANIFICATI ===== */}
