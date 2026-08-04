@@ -2306,7 +2306,9 @@ export default function App() {
       : []),
     ...(user.role === "sviluppatore" ||
     user.role === "direzione" ||
-    user.role === "manutentore"
+    user.role === "manutentore" ||
+    user.role === "reception" ||
+    user.role === "direttore_congressi"
       ? [
           {
             icon: I.droplet,
@@ -3528,7 +3530,9 @@ export default function App() {
       {sheet === "sensori" &&
         (user.role === "sviluppatore" ||
           user.role === "direzione" ||
-          user.role === "manutentore") && (
+          user.role === "manutentore" ||
+          user.role === "reception" ||
+          user.role === "direttore_congressi") && (
           <SensoriTemperatura onClose={() => setSheet(null)} />
         )}
       {sheet === "wa" && (
