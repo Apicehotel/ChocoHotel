@@ -9619,7 +9619,7 @@ function SensoriTemperatura({ onClose }) {
     const { data } = await supabase
       .from("sensori_temperatura")
       .select("*")
-      .order("nome");
+      .order("ordine");
     setSensori(data || []);
     setLoading(false);
   }, []);
@@ -9731,15 +9731,16 @@ function SensoriTemperatura({ onClose }) {
                   ? "#8A9490"
                   : temp < 0
                     ? "#2563EB"
-                    : temp > 30
+                    : s.in_allerta
                       ? "#C81E1E"
                       : "#0F6B5C";
             return (
               <div
                 key={s.device_id}
                 style={{
-                  background: "#fff",
-                  border: "1px solid #E4E0D6",
+                  background: s.in_allerta ? "#FDEAEA" : "#fff",
+                  border:
+                    "1px solid " + (s.in_allerta ? "#C81E1E55" : "#E4E0D6"),
                   borderRadius: 14,
                   padding: "14px 16px",
                   marginBottom: 10,
@@ -9750,6 +9751,7 @@ function SensoriTemperatura({ onClose }) {
               >
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 14 }}>
+                    {s.in_allerta ? "🌡️ " : ""}
                     {s.nome?.trim()}
                   </div>
                   <div style={{ fontSize: 11.5, color: "#8A9490", marginTop: 2 }}>
@@ -9758,6 +9760,12 @@ function SensoriTemperatura({ onClose }) {
                       hour: "2-digit",
                       minute: "2-digit",
                     })}
+                    {s.in_allerta && (
+                      <span style={{ color: "#C81E1E", fontWeight: 700 }}>
+                        {" "}
+                        · sopra i 20°C
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div
