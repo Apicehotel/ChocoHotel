@@ -366,6 +366,39 @@ export const DB = {
     if (error) console.error(error);
     return !error;
   },
+  // Trasforma una richiesta urgente non risolvibile sul momento in una
+  // segnalazione vera (con camera/categoria/urgenza), e chiude l'urgenza
+  // collegandola — resta tracciabile, ma sparisce dagli attivi.
+  async trasformaUrgenzaInSegnalazione(urgenzaId, nome, dati) {
+    const row = {
+      camera: dati.camera,
+      categoria: dati.categoria,
+      urgenza: dati.urgenza,
+      note: dati.note,
+      creato_da: nome,
+      stato: "todo",
+    };
+    const { data: nuova, error: errIns } = await supabase
+      .from("segnalazioni")
+      .insert(row)
+      .select()
+      .single();
+    if (errIns) {
+      console.error(errIns);
+      return null;
+    }
+    const { error: errUpd } = await supabase
+      .from("richieste_urgenti")
+      .update({
+        stato: "completata",
+        completata_da: nome,
+        completata_il: new Date().toISOString(),
+        trasformata_in_segnalazione_id: nuova.id,
+      })
+      .eq("id", urgenzaId);
+    if (errUpd) console.error(errUpd);
+    return nuova;
+  },
 
   // ── Presenza in struttura (check-in manuale + rilevamento GPS) ────────────
   // in_struttura_via distingue chi l'ha impostato:
@@ -479,6 +512,7 @@ function urgenzaFromRow(r) {
     completedAt: r.completata_il
       ? new Date(r.completata_il).getTime()
       : null,
+    trasformataInSegnalazioneId: r.trasformata_in_segnalazione_id || null,
   };
 }
 

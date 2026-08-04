@@ -331,7 +331,7 @@ export function UrgenzaSendButton({ user, onSend, onFlash }) {
 // Flusso a 3 stati: aperta (rossa, bottone "Vado") -> presa_in_carico
 // (arancione, bottone "Fatto") -> completata (sparisce dal banner, resta
 // solo nello storico della scheda Urgenze).
-export function UrgenzaBanner({ urgenze, user, onTake, onComplete }) {
+export function UrgenzaBanner({ urgenze, user, onTake, onComplete, onTransform, canTransform }) {
   const attive = (urgenze || []).filter((u) => u.status !== "completata");
   if (!attive.length) return null;
   return (
@@ -399,10 +399,29 @@ export function UrgenzaBanner({ urgenze, user, onTake, onComplete }) {
                 fontSize: 13.5,
                 fontWeight: 700,
                 cursor: "pointer",
+                marginBottom: canTransform ? 8 : 0,
               }}
             >
               {inCorso ? "Fatto" : "Vado"}
             </button>
+            {canTransform && (
+              <button
+                onClick={() => onTransform(u)}
+                style={{
+                  width: "100%",
+                  padding: 10,
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,.5)",
+                  background: "transparent",
+                  color: "#fff",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Non risolvibile — trasforma in segnalazione
+              </button>
+            )}
           </div>
         );
       })}
@@ -415,7 +434,7 @@ export function UrgenzaBanner({ urgenze, user, onTake, onComplete }) {
 // carico, resta consultabile finche' la pulizia automatica a 72h non la
 // toglie dal DB). Complementa il banner in cima, che invece serve per
 // l'allarme immediato con suono.
-export function UrgenzeLog({ urgenze, onTake, onComplete, canTake = true }) {
+export function UrgenzeLog({ urgenze, onTake, onComplete, onTransform, canTransform, canTake = true }) {
   if (!urgenze || urgenze.length === 0) {
     return (
       <div
@@ -500,7 +519,9 @@ export function UrgenzeLog({ urgenze, onTake, onComplete, canTake = true }) {
             </div>
             {fatta ? (
               <div style={{ fontSize: 12, marginTop: 8, fontWeight: 600 }}>
-                Fatto da {u.completedBy || u.takenBy}
+                {u.trasformataInSegnalazioneId
+                  ? "Trasformata in segnalazione"
+                  : "Fatto da " + (u.completedBy || u.takenBy)}
                 {u.completedAt
                   ? " · " +
                     new Date(u.completedAt).toLocaleString("it-IT", {
@@ -510,10 +531,15 @@ export function UrgenzeLog({ urgenze, onTake, onComplete, canTake = true }) {
                       minute: "2-digit",
                     })
                   : ""}
+                {u.trasformataInSegnalazioneId && (
+                  <div style={{ fontWeight: 400, opacity: 0.85, marginTop: 2 }}>
+                    da {u.completedBy}
+                  </div>
+                )}
               </div>
             ) : inCorso ? (
               <>
-                <div style={{ fontSize: 12, marginBottom: canTake ? 8 : 0, fontWeight: 600 }}>
+                <div style={{ fontSize: 12, marginBottom: canTake || canTransform ? 8 : 0, fontWeight: 600 }}>
                   {u.takenBy} sta andando
                   {u.takenAt
                     ? " · " +
@@ -538,29 +564,71 @@ export function UrgenzeLog({ urgenze, onTake, onComplete, canTake = true }) {
                       fontSize: 13.5,
                       fontWeight: 700,
                       cursor: "pointer",
+                      marginBottom: canTransform ? 8 : 0,
                     }}
                   >
                     Fatto
                   </button>
                 )}
+                {canTransform && (
+                  <button
+                    onClick={() => onTransform(u)}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      borderRadius: 10,
+                      border: "1px solid currentColor",
+                      background: "transparent",
+                      color: "#8A4A0F",
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Non risolvibile — trasforma in segnalazione
+                  </button>
+                )}
               </>
-            ) : canTake ? (
-              <button
-                onClick={() => onTake(u.id)}
-                style={{
-                  width: "100%",
-                  padding: 12,
-                  borderRadius: 10,
-                  border: "none",
-                  background: "#fff",
-                  color: "#8A0F0F",
-                  fontSize: 13.5,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Vado
-              </button>
+            ) : canTake || canTransform ? (
+              <>
+                {canTake && (
+                  <button
+                    onClick={() => onTake(u.id)}
+                    style={{
+                      width: "100%",
+                      padding: 12,
+                      borderRadius: 10,
+                      border: "none",
+                      background: "#fff",
+                      color: "#8A0F0F",
+                      fontSize: 13.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      marginBottom: canTransform ? 8 : 0,
+                    }}
+                  >
+                    Vado
+                  </button>
+                )}
+                {canTransform && (
+                  <button
+                    onClick={() => onTransform(u)}
+                    style={{
+                      width: "100%",
+                      padding: 10,
+                      borderRadius: 10,
+                      border: "1px solid rgba(255,255,255,.6)",
+                      background: "transparent",
+                      color: "#fff",
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Non risolvibile — trasforma in segnalazione
+                  </button>
+                )}
+              </>
             ) : (
               <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>
                 In attesa che un manutentore la prenda in carico

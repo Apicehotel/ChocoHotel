@@ -1930,6 +1930,21 @@ export default function App() {
     await refreshUrgenze();
     flash("Segnata come fatta ✓");
   };
+  const [trasformaTarget, setTrasformaTarget] = useState(null);
+  const trasformaUrgenza = async (dati) => {
+    const nuova = await DB.trasformaUrgenzaInSegnalazione(
+      trasformaTarget.id,
+      user.name,
+      dati,
+    );
+    if (!nuova) {
+      flash("Errore nella trasformazione", false);
+      return;
+    }
+    await Promise.all([refresh(), refreshUrgenze()]);
+    setTrasformaTarget(null);
+    flash("Trasformata in segnalazione ✓");
+  };
   const saveItem = async (m) => {
     setItems((prev) => sortItems([...prev.filter((i) => i.id !== m.id), m]));
     await DB.saveItem(m);
@@ -2560,6 +2575,8 @@ export default function App() {
               user={user}
               onTake={prendiUrgenza}
               onComplete={completaUrgenza}
+              onTransform={setTrasformaTarget}
+              canTransform={vedeUrgenze}
             />
           )}
         </div>
@@ -3149,6 +3166,8 @@ export default function App() {
                   urgenze={filtrate}
                   onTake={prendiUrgenza}
                   onComplete={completaUrgenza}
+                  onTransform={setTrasformaTarget}
+                  canTransform={vedeUrgenze}
                   canTake={user.role === "manutentore"}
                 />
               </>
@@ -3675,6 +3694,13 @@ export default function App() {
             setGpsSuggestion(false);
           }}
           onDismiss={() => setGpsSuggestion(false)}
+        />
+      )}
+      {trasformaTarget && (
+        <TrasformaUrgenzaModal
+          urgenza={trasformaTarget}
+          onClose={() => setTrasformaTarget(null)}
+          onSave={trasformaUrgenza}
         />
       )}
       {switchConfirm && (
@@ -5860,6 +5886,120 @@ function NewForm({ user, onClose, onSave, zones }) {
         }
       >
         {I.plus} Invia segnalazione
+      </button>{" "}
+    </Sheet>
+  );
+} // ── Trasforma urgenza in segnalazione ───────────────────────────────────────
+function TrasformaUrgenzaModal({ urgenza, onClose, onSave }) {
+  const [room, setRoom] = useState("");
+  const [cat, setCat] = useState("varie");
+  const [urg, setUrg] = useState("alta");
+  const [notes, setNotes] = useState(urgenza.note || "");
+  const [busy, setBusy] = useState(false);
+  const roomTrim = room.trim();
+  const camCheck = roomTrim ? resolveCamera(roomTrim) : null;
+  const camInvalid = !!(camCheck && !camCheck.ok);
+  const camResolved = camCheck && camCheck.ok ? camCheck.value : null;
+  const canSave = roomTrim && notes.trim() && !camInvalid && !busy;
+  return (
+    <Sheet onClose={onClose} title="Trasforma in segnalazione">
+      {" "}
+      <div
+        style={{
+          background: "#FDEAEA",
+          borderRadius: 10,
+          padding: "10px 12px",
+          fontSize: 12.5,
+          color: "#8A0F0F",
+          marginBottom: 14,
+          lineHeight: 1.4,
+        }}
+      >
+        Richiesta urgente originale, da {urgenza.createdBy}: "{urgenza.note}"
+        <br />
+        Verrà segnata come gestita e collegata alla nuova segnalazione.
+      </div>
+      <Field label="Numero camera o zona">
+        <CameraZonaField value={room} onChange={setRoom} autoFocus />
+        {camInvalid && (
+          <div style={{ fontSize: 12, color: "#B23A2E", marginTop: 6 }}>
+            Numero camera o zona non valida. Controlla il numero o scegli una
+            zona nota (es. Hall Jazz, Reception...).
+          </div>
+        )}
+        {camResolved && camResolved !== roomTrim && (
+          <div style={{ fontSize: 12, color: "#2E7D5B", marginTop: 6 }}>
+            Zona riconosciuta: {camResolved}
+          </div>
+        )}
+      </Field>{" "}
+      <Field label="Categoria">
+        <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+          {Object.entries(CAT).map(([k, v]) => (
+            <button
+              key={k}
+              onClick={() => setCat(k)}
+              style={{
+                padding: "8px 13px",
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1.5px solid " + (cat === k ? v.color : "#E4E0D6"),
+                background: cat === k ? v.color + "18" : "#fff",
+                color: cat === k ? v.color : "#5C645E",
+              }}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </Field>{" "}
+      <Field label="Urgenza">
+        <div style={{ display: "flex", gap: 7 }}>
+          {Object.entries(URG).map(([k, v]) => (
+            <button
+              key={k}
+              onClick={() => setUrg(k)}
+              style={{
+                flex: 1,
+                padding: "9px 6px",
+                borderRadius: 9,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                border: "1.5px solid " + (urg === k ? v.fg : "#E4E0D6"),
+                background: urg === k ? v.bg : "#fff",
+                color: urg === k ? v.fg : "#5C645E",
+              }}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      </Field>{" "}
+      <Field label="Note">
+        <textarea
+          style={{ ...inputSt, minHeight: 80, resize: "vertical" }}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+        />
+      </Field>{" "}
+      <button
+        disabled={!canSave}
+        onClick={async () => {
+          setBusy(true);
+          await onSave({
+            camera: camResolved || roomTrim,
+            categoria: cat,
+            urgenza: urg,
+            note: notes.trim(),
+          });
+          setBusy(false);
+        }}
+        style={{ ...ctaSt, opacity: canSave ? 1 : 0.5 }}
+      >
+        {I.plus} Crea segnalazione e chiudi urgenza
       </button>{" "}
     </Sheet>
   );
