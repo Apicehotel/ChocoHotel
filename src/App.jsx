@@ -6377,6 +6377,84 @@ function Detail({
     onSave({ ...it, tecnicoCalledBy: user.name, tecnicoCalledAt: Date.now() });
     onFlash("Chiamata registrata ✓");
   };
+  const [sendingWa, setSendingWa] = useState(false);
+  const [checkingStato, setCheckingStato] = useState(false);
+  const [showManualArrivo, setShowManualArrivo] = useState(false);
+  const [manualArrivo, setManualArrivo] = useState("");
+  const sendTecnicoWa = async () => {
+    if (!it.tecnicoTelefono) {
+      onFlash("Manca il numero di telefono del tecnico", false);
+      return;
+    }
+    setSendingWa(true);
+    try {
+      const res = await fetch(
+        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-tecnico-whatsapp",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            segnalazioneId: it.id,
+            telefono: it.tecnicoTelefono,
+            camera: it.room,
+            problema: it.notes || "",
+          }),
+        },
+      );
+      const json = await res.json();
+      if (json.ok) {
+        setLCalled(true);
+        onFlash("Messaggio inviato al tecnico ✓");
+      } else {
+        onFlash("Errore invio messaggio al tecnico", false);
+      }
+    } catch {
+      onFlash("Errore invio messaggio al tecnico", false);
+    }
+    setSendingWa(false);
+  };
+  const checkTecnicoStato = async () => {
+    if (!it.tecnicoMsgSid) return;
+    setCheckingStato(true);
+    try {
+      await fetch(
+        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-tecnico-whatsapp?checkSid=" +
+          it.tecnicoMsgSid +
+          "&segnalazioneId=" +
+          it.id,
+      );
+      onFlash("Stato aggiornato ✓");
+    } catch {
+      onFlash("Errore controllo stato", false);
+    }
+    setCheckingStato(false);
+  };
+  const saveManualArrivo = () => {
+    if (!manualArrivo.trim()) return;
+    onSave({
+      ...it,
+      tecnicoRispostaStato: "manuale",
+      tecnicoArrivoTesto: manualArrivo.trim(),
+    });
+    setShowManualArrivo(false);
+    setManualArrivo("");
+    onFlash("Orario aggiornato ✓");
+  };
+  const MSG_STATO_LABEL = {
+    queued: "In coda",
+    sent: "Inviato",
+    delivered: "Consegnato",
+    read: "Letto ✓✓",
+    failed: "Non consegnato ⚠️",
+    undelivered: "Non consegnato ⚠️",
+  };
+  const RISPOSTA_LABEL = {
+    in_attesa: "In attesa di risposta",
+    confermato: "Arrivo confermato",
+    generico: "Confermato (orario non specificato)",
+    rifiutato: "Non disponibile ⚠️",
+    manuale: "Aggiornato a mano",
+  };
   const techDone = () => {
     onSave({
       ...it,
@@ -6590,25 +6668,156 @@ function Detail({
             <div style={{ fontSize: 11, color: "#92400E", marginBottom: 10 }}>
               Da {it.tecnicoRequestedBy} · {fmt(it.tecnicoRequestedAt)}
             </div>
-            {calledBy ? (
+            {(it.tecnicoMsgSid || calledBy) ? (
               <>
-                <div
-                  style={{
-                    background: "#fff",
-                    border: "1px solid #FCD34D",
-                    borderRadius: 9,
-                    padding: "9px 12px",
-                    fontSize: 13,
-                    color: "#92400E",
-                    marginBottom: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                >
-                  {I.check} Chiamato da <strong>{calledBy}</strong> ·{" "}
-                  {fmt(calledAt)}
-                </div>
+                {it.tecnicoMsgSid && (
+                  <div
+                    style={{
+                      background: "#fff",
+                      border: "1px solid #FCD34D",
+                      borderRadius: 9,
+                      padding: "9px 12px",
+                      fontSize: 13,
+                      color: "#92400E",
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 6,
+                    }}
+                  >
+                    <span>
+                      {I.msg} Messaggio:{" "}
+                      <strong>
+                        {MSG_STATO_LABEL[it.tecnicoMsgStato] ||
+                          it.tecnicoMsgStato ||
+                          "Inviato"}
+                      </strong>
+                    </span>
+                    <button
+                      onClick={checkTecnicoStato}
+                      disabled={checkingStato}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#92400E",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        opacity: checkingStato ? 0.5 : 1,
+                        textDecoration: "underline",
+                      }}
+                    >
+                      {checkingStato ? "..." : "↻ Aggiorna"}
+                    </button>
+                  </div>
+                )}
+                {calledBy && (
+                  <div
+                    style={{
+                      background: "#fff",
+                      border: "1px solid #FCD34D",
+                      borderRadius: 9,
+                      padding: "9px 12px",
+                      fontSize: 13,
+                      color: "#92400E",
+                      marginBottom: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    {I.check} Chiamato da <strong>{calledBy}</strong> ·{" "}
+                    {fmt(calledAt)}
+                  </div>
+                )}
+                {it.tecnicoRispostaStato && (
+                  <div
+                    style={{
+                      background:
+                        it.tecnicoRispostaStato === "rifiutato"
+                          ? "#FBE9E6"
+                          : "#fff",
+                      border:
+                        "1px solid " +
+                        (it.tecnicoRispostaStato === "rifiutato"
+                          ? "#F3B4A8"
+                          : "#FCD34D"),
+                      borderRadius: 9,
+                      padding: "9px 12px",
+                      fontSize: 13,
+                      color:
+                        it.tecnicoRispostaStato === "rifiutato"
+                          ? "#B23A2E"
+                          : "#92400E",
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>
+                      {RISPOSTA_LABEL[it.tecnicoRispostaStato] ||
+                        it.tecnicoRispostaStato}
+                    </div>
+                    {it.tecnicoArrivoTesto && (
+                      <div style={{ marginTop: 2 }}>
+                        {it.tecnicoArrivoTesto}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {canCall && !showManualArrivo && (
+                  <button
+                    onClick={() => setShowManualArrivo(true)}
+                    style={{
+                      ...ctaSt,
+                      background: "#fff",
+                      color: "#92400E",
+                      border: "1.5px solid #FCD34D",
+                      fontSize: 13,
+                      padding: "10px 6px",
+                      marginBottom: 7,
+                    }}
+                  >
+                    {I.phone} Aggiorna orario tecnico (telefonata)
+                  </button>
+                )}
+                {showManualArrivo && (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 7,
+                      marginBottom: 7,
+                    }}
+                  >
+                    <input
+                      style={inputSt}
+                      placeholder='Es. "Detto per telefono: arriva domani mattina"'
+                      value={manualArrivo}
+                      onChange={(e) => setManualArrivo(e.target.value)}
+                      autoFocus
+                    />
+                    <div style={{ display: "flex", gap: 7 }}>
+                      <button
+                        onClick={saveManualArrivo}
+                        disabled={!manualArrivo.trim()}
+                        style={{ ...ctaSt, background: "#D97706", flex: 1 }}
+                      >
+                        {I.check} Salva
+                      </button>
+                      <button
+                        onClick={() => setShowManualArrivo(false)}
+                        style={{
+                          ...ctaSt,
+                          background: "#E4E0D6",
+                          color: "#1B2420",
+                          flex: "0 0 44px",
+                        }}
+                      >
+                        {I.x}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {canCall && (
                   <button
                     onClick={techDone}
@@ -6639,39 +6848,36 @@ function Detail({
                     </button>
                   )}
                   <div style={{ display: "flex", gap: 7 }}>
-                    {waLink && (
-                      <a
-                        href={waLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          flex: 1,
-                          background: "#25D366",
-                          color: "#fff",
-                          fontWeight: 700,
-                          fontSize: 14,
-                          padding: 14,
-                          borderRadius: 12,
-                          border: "none",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 8,
-                          textDecoration: "none",
-                        }}
+                    <button
+                      onClick={sendTecnicoWa}
+                      disabled={sendingWa || !it.tecnicoTelefono}
+                      style={{
+                        flex: 1,
+                        background: "#25D366",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 14,
+                        padding: 14,
+                        borderRadius: 12,
+                        border: "none",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 8,
+                        opacity: sendingWa ? 0.6 : 1,
+                      }}
+                    >
+                      <svg
+                        width="17"
+                        height="17"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
                       >
-                        <svg
-                          width="17"
-                          height="17"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M17.6 6.32A7.85 7.85 0 0 0 12.05 4a7.94 7.94 0 0 0-6.9 11.9L4 20l4.21-1.1a7.93 7.93 0 0 0 3.8.97h0a7.95 7.95 0 0 0 5.59-13.55zm-5.55 12.2h0a6.6 6.6 0 0 1-3.36-.92l-.24-.14-2.5.65.67-2.44-.16-.25a6.6 6.6 0 1 1 12.27-3.5 6.56 6.56 0 0 1-6.68 6.6zm3.6-4.93c-.2-.1-1.17-.58-1.35-.64s-.31-.1-.45.1-.52.64-.64.78-.23.15-.43.05a5.42 5.42 0 0 1-1.6-.98 5.99 5.99 0 0 1-1.1-1.37c-.12-.2 0-.3.09-.4s.2-.23.3-.35a1.4 1.4 0 0 0 .2-.33.36.36 0 0 0 0-.35c0-.1-.45-1.08-.62-1.48s-.33-.33-.45-.33-.25 0-.38 0a.74.74 0 0 0-.53.25 2.23 2.23 0 0 0-.7 1.66 3.88 3.88 0 0 0 .82 2.05 8.86 8.86 0 0 0 3.39 3 11.5 11.5 0 0 0 1.13.42 2.7 2.7 0 0 0 1.25.08 2.04 2.04 0 0 0 1.34-.94 1.65 1.65 0 0 0 .12-.94c-.05-.1-.18-.15-.39-.25z" />
-                        </svg>{" "}
-                        Apri chat
-                      </a>
-                    )}
+                        <path d="M17.6 6.32A7.85 7.85 0 0 0 12.05 4a7.94 7.94 0 0 0-6.9 11.9L4 20l4.21-1.1a7.93 7.93 0 0 0 3.8.97h0a7.95 7.95 0 0 0 5.59-13.55zm-5.55 12.2h0a6.6 6.6 0 0 1-3.36-.92l-.24-.14-2.5.65.67-2.44-.16-.25a6.6 6.6 0 1 1 12.27-3.5 6.56 6.56 0 0 1-6.68 6.6zm3.6-4.93c-.2-.1-1.17-.58-1.35-.64s-.31-.1-.45.1-.52.64-.64.78-.23.15-.43.05a5.42 5.42 0 0 1-1.6-.98 5.99 5.99 0 0 1-1.1-1.37c-.12-.2 0-.3.09-.4s.2-.23.3-.35a1.4 1.4 0 0 0 .2-.33.36.36 0 0 0 0-.35c0-.1-.45-1.08-.62-1.48s-.33-.33-.45-.33-.25 0-.38 0a.74.74 0 0 0-.53.25 2.23 2.23 0 0 0-.7 1.66 3.88 3.88 0 0 0 .82 2.05 8.86 8.86 0 0 0 3.39 3 11.5 11.5 0 0 0 1.13.42 2.7 2.7 0 0 0 1.25.08 2.04 2.04 0 0 0 1.34-.94 1.65 1.65 0 0 0 .12-.94c-.05-.1-.18-.15-.39-.25z" />
+                      </svg>{" "}
+                      {sendingWa ? "Invio..." : "Contatta tecnico"}
+                    </button>
                     <button
                       onClick={markCalled}
                       style={{ ...ctaSt, background: "#D97706", flex: 1 }}
@@ -6682,7 +6888,7 @@ function Detail({
                 </div>
               )
             )}
-            {!canCall && !calledBy && (
+            {!canCall && !calledBy && !it.tecnicoMsgSid && (
               <div style={{ fontSize: 13, color: "#92400E" }}>
                 In attesa che direzione/reception chiami {it.tecnicoNome}.
               </div>

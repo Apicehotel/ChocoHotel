@@ -50,6 +50,14 @@ function itemFromRow(r) {
     tecnicoAskedAt: r.tecnico_sollecitato_il
       ? new Date(r.tecnico_sollecitato_il).getTime()
       : null,
+    tecnicoMsgSid: r.tecnico_msg_sid,
+    tecnicoMsgStato: r.tecnico_msg_stato,
+    tecnicoRispostaStato: r.tecnico_risposta_stato,
+    tecnicoArrivoTesto: r.tecnico_arrivo_testo,
+    tecnicoArrivoAt: r.tecnico_arrivo_at
+      ? new Date(r.tecnico_arrivo_at).getTime()
+      : null,
+    tecnicoSollecitoInviato: r.tecnico_sollecito_inviato,
   };
 }
 function itemToRow(it) {
@@ -98,6 +106,11 @@ function itemToRow(it) {
     tecnico_sollecitato_da: it.tecnicoAskedBy || null,
     tecnico_sollecitato_il: it.tecnicoAskedAt
       ? new Date(it.tecnicoAskedAt).toISOString()
+      : null,
+    tecnico_risposta_stato: it.tecnicoRispostaStato || null,
+    tecnico_arrivo_testo: it.tecnicoArrivoTesto || null,
+    tecnico_arrivo_at: it.tecnicoArrivoAt
+      ? new Date(it.tecnicoArrivoAt).toISOString()
       : null,
   };
 }
