@@ -3591,7 +3591,21 @@ export default function App() {
             setSheet(null);
             flash("Eliminata", false);
           }}
+          onEdit={(id) => setSheet({ edits: id })}
           onFlash={flash}
+        />
+      )}
+      {sheet?.edits && items.find((i) => i.id === sheet.edits) && (
+        <NewForm
+          user={user}
+          zones={myZones}
+          initial={items.find((i) => i.id === sheet.edits)}
+          onClose={() => setSheet(null)}
+          onSave={(m) => {
+            saveItem(m);
+            setSheet(null);
+            flash("Segnalazione aggiornata ✓");
+          }}
         />
       )}
       {sheet?.pd && (
@@ -5774,14 +5788,15 @@ function PlannedDetail({
     </Sheet>
   );
 } // ── NewForm segnalazione ──────────────────────────────────────────────────────
-function NewForm({ user, onClose, onSave, zones }) {
-  const [room, setRoom] = useState("");
-  const [urg, setUrg] = useState("media");
-  const [cat, setCat] = useState("varie");
-  const [notes, setNotes] = useState("");
-  const [photo, setPhoto] = useState(null);
+function NewForm({ user, onClose, onSave, zones, initial }) {
+  const editing = !!initial;
+  const [room, setRoom] = useState(initial?.room || "");
+  const [urg, setUrg] = useState(initial?.urgency || "media");
+  const [cat, setCat] = useState(initial?.category || "varie");
+  const [notes, setNotes] = useState(initial?.notes || "");
+  const [photo, setPhoto] = useState(initial?.photoBefore || null);
   const [busy, setBusy] = useState(false);
-  const [roomStatus, setRoomStatus] = useState(null);
+  const [roomStatus, setRoomStatus] = useState(initial?.roomStatus || null);
   const canSetRoomStatus =
     user.role !== "manutentore" && user.role !== "responsabile_area";
   const [camMode, setCamMode] = useState("camera");
@@ -5804,7 +5819,10 @@ function NewForm({ user, onClose, onSave, zones }) {
   const camInvalid = !!(camCheck && !camCheck.ok);
   const camResolved = camCheck && camCheck.ok ? camCheck.value : null;
   return (
-    <Sheet onClose={onClose} title="Nuova segnalazione">
+    <Sheet
+      onClose={onClose}
+      title={editing ? "Modifica segnalazione" : "Nuova segnalazione"}
+    >
       {" "}
       <Field label="Numero camera">
         {zones && zones.length === 1 ? (
@@ -6032,25 +6050,36 @@ function NewForm({ user, onClose, onSave, zones }) {
           opacity: !roomTrim || busy || camInvalid ? 0.5 : 1,
         }}
         disabled={!roomTrim || busy || camInvalid}
-        onClick={() =>
-          onSave({
-            id: uid(),
+        onClick={() => {
+          const payload = {
             room: camResolved || roomTrim,
             urgency: urg,
             category: cat,
             notes: notes.trim(),
             roomStatus,
             photoBefore: photo,
-            photoAfter: null,
-            status: "todo",
-            createdBy: user.name,
-            createdAt: Date.now(),
-            completedBy: null,
-            completedAt: null,
-          })
-        }
+          };
+          if (editing) {
+            onSave({ ...initial, ...payload });
+          } else {
+            onSave({
+              ...payload,
+              id: uid(),
+              photoAfter: null,
+              status: "todo",
+              createdBy: user.name,
+              createdAt: Date.now(),
+              completedBy: null,
+              completedAt: null,
+            });
+          }
+        }}
       >
-        {I.plus} Invia segnalazione
+        {editing ? (
+          <>{I.edit} Salva modifiche</>
+        ) : (
+          <>{I.plus} Invia segnalazione</>
+        )}
       </button>{" "}
     </Sheet>
   );
@@ -6177,6 +6206,7 @@ function Detail({
   onPhoto,
   onSave,
   onDelete,
+  onEdit,
   onFlash,
 }) {
   const u = URG[it.urgency] || URG.media;
@@ -6394,41 +6424,70 @@ function Detail({
     });
     onFlash(ans === "ritiro" ? "Vai a ritirarlo 🚗" : "Verrà ordinato 📦");
   };
+  const canEdit =
+    user.role === "direzione" ||
+    user.role === "direttore_congressi" ||
+    user.role === "sviluppatore" ||
+    user.role === "reception" ||
+    ((user.role === "governante" || user.role === "sviluppatore") &&
+      it.createdBy === user.name) ||
+    ((user.role === "portiere_notturno" || user.role === "sviluppatore") &&
+      it.createdBy === user.name) ||
+    ((user.role === "responsabile_area" || user.role === "sviluppatore") &&
+      it.createdBy === user.name);
   return (
     <Sheet onClose={onClose} title={"Camera " + it.room}>
       {" "}
-      {(user.role === "direzione" ||
-        user.role === "direttore_congressi" ||
-        user.role === "sviluppatore" ||
-        user.role === "reception" ||
-        ((user.role === "governante" || user.role === "sviluppatore") &&
-          it.createdBy === user.name) ||
-        ((user.role === "portiere_notturno" || user.role === "sviluppatore") &&
-          it.createdBy === user.name) ||
-        ((user.role === "responsabile_area" || user.role === "sviluppatore") &&
-          it.createdBy === user.name)) && (
-        <button
-          onClick={() => {
-            if (confirm("Eliminare?")) onDelete(it.id);
-          }}
+      {canEdit && (
+        <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 6,
+            gap: 8,
             marginLeft: "auto",
             marginBottom: 8,
-            background: "#FBE9E6",
-            border: "none",
-            color: "#B23A2E",
-            padding: "6px 12px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
+            justifyContent: "flex-end",
           }}
         >
-          {I.trash} Elimina
-        </button>
+          {" "}
+          <button
+            onClick={() => onEdit(it.id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#EFF6FF",
+              border: "none",
+              color: "#1D4ED8",
+              padding: "6px 12px",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {I.edit} Modifica
+          </button>{" "}
+          <button
+            onClick={() => {
+              if (confirm("Eliminare?")) onDelete(it.id);
+            }}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#FBE9E6",
+              border: "none",
+              color: "#B23A2E",
+              padding: "6px 12px",
+              borderRadius: 8,
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            {I.trash} Elimina
+          </button>
+        </div>
       )}{" "}
       {blk(
         null,
