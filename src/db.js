@@ -109,6 +109,8 @@ function planFromRow(r) {
     category: r.categoria,
     notes: r.note,
     scheduledAt: r.programmato_il ? new Date(r.programmato_il).getTime() : null,
+    scheduledUntil: r.programmato_al ? new Date(r.programmato_al).getTime() : null,
+    piani: r.piani || [],
     assignees: r.assegnatari || [],
     status: r.stato,
     createdBy: r.creato_da,
@@ -139,6 +141,10 @@ function planToRow(p) {
     programmato_il: p.scheduledAt
       ? new Date(p.scheduledAt).toISOString()
       : null,
+    programmato_al: p.scheduledUntil
+      ? new Date(p.scheduledUntil).toISOString()
+      : null,
+    piani: p.piani || [],
     assegnatari: p.assignees || [],
     stato: p.status,
     creato_da: p.createdBy,

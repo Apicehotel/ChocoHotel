@@ -148,6 +148,19 @@ const I = {
       <path d="M10 11v6M14 11v6M9 6V4h6v2" />
     </svg>
   ),
+  edit: (
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  ),
   camera: (
     <svg
       width="22"
@@ -675,6 +688,25 @@ const fmtDate = (ts) => {
     d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" })
   );
 };
+// timestamp (ms) -> valore per <input type="datetime-local"> in ora locale
+const dtLocal = (ts) => {
+  if (!ts) return "";
+  const d = new Date(ts);
+  const p2 = (n) => String(n).padStart(2, "0");
+  return (
+    d.getFullYear() +
+    "-" +
+    p2(d.getMonth() + 1) +
+    "-" +
+    p2(d.getDate()) +
+    "T" +
+    p2(d.getHours()) +
+    ":" +
+    p2(d.getMinutes())
+  );
+};
+// timestamp (ms) -> valore per <input type="date"> in ora locale
+const dLocal = (ts) => (ts ? dtLocal(ts).slice(0, 10) : "");
 function compress(file) {
   return new Promise((res, rej) => {
     const r = new FileReader();
@@ -3573,8 +3605,22 @@ export default function App() {
             setSheet(null);
             flash("Eliminato", false);
           }}
+          onEdit={(id) => setSheet({ editp: id })}
           onFlash={flash}
           onPhoto={(src) => setViewer(src)}
+        />
+      )}
+      {sheet?.editp && planned.find((p) => p.id === sheet.editp) && (
+        <NewPlanned
+          user={user}
+          tec={tec}
+          initial={planned.find((p) => p.id === sheet.editp)}
+          onClose={() => setSheet(null)}
+          onSave={(p) => {
+            savePlanned(p);
+            setSheet(null);
+            flash("Intervento aggiornato ✓");
+          }}
         />
       )}
       {myWorkOpen && (
@@ -4307,15 +4353,43 @@ function PlannedCard({ p, user, onOpen }) {
     </div>
   );
 } // ── Nuovo intervento pianificato ──────────────────────────────────────────────
-function NewPlanned({ user, tec, onClose, onSave }) {
-  const [room, setRoom] = useState("");
-  const [cat, setCat] = useState("varie");
-  const [piano, setPiano] = useState(null);
-  const [notes, setNotes] = useState("");
-  const [dt, setDt] = useState("");
-  const [dtTo, setDtTo] = useState("");
-  const [pianiSelezionati, setPianiSelezionati] = useState([]);
-  const [assignees, setAssignees] = useState([]);
+function NewPlanned({ user, tec, onClose, onSave, initial }) {
+  const editing = !!initial;
+  const [cat, setCat] = useState(initial?.category || "varie");
+  const [room, setRoom] = useState(() => {
+    if (!initial) return "";
+    if (["filtri", "idromassaggio", "extrapiani"].includes(initial.category))
+      return "";
+    return initial.room || "";
+  });
+  const [piano, setPiano] = useState(() => {
+    if (!initial || !["filtri", "idromassaggio"].includes(initial.category))
+      return null;
+    const id = initial.piani?.[0];
+    return (
+      (id && PIANI.find((pi) => pi.id === id)) ||
+      PIANI.find((pi) => pi.label === initial.room) ||
+      null
+    );
+  });
+  const [notes, setNotes] = useState(initial?.notes || "");
+  const [dt, setDt] = useState(() => {
+    if (!initial) return "";
+    return initial.category === "extrapiani"
+      ? dLocal(initial.scheduledAt)
+      : dtLocal(initial.scheduledAt);
+  });
+  const [dtTo, setDtTo] = useState(() =>
+    initial?.category === "extrapiani" ? dLocal(initial.scheduledUntil) : "",
+  );
+  const [pianiSelezionati, setPianiSelezionati] = useState(() => {
+    if (!initial || initial.category !== "extrapiani") return [];
+    const ids = initial.piani || [];
+    if (ids.length) return ids;
+    const labels = (initial.room || "").split(",").map((s) => s.trim());
+    return PIANI.filter((pi) => labels.includes(pi.label)).map((pi) => pi.id);
+  });
+  const [assignees, setAssignees] = useState(initial?.assignees || []);
   const [users, setUsers] = useState([]);
   useEffect(() => {
     DB.loadUsers().then((u) => setUsers(u));
@@ -4453,7 +4527,10 @@ function NewPlanned({ user, tec, onClose, onSave }) {
     );
   };
   return (
-    <Sheet onClose={onClose} title="Nuovo intervento pianificato">
+    <Sheet
+      onClose={onClose}
+      title={editing ? "Modifica intervento pianificato" : "Nuovo intervento pianificato"}
+    >
       {" "}
       {isExtraPiani ? (
         <Field label="Piani *">
@@ -4696,53 +4773,79 @@ function NewPlanned({ user, tec, onClose, onSave }) {
             marginBottom: 12,
           }}
         >
-          Compila tutti i campi (*) per pianificare l'intervento.
+          {editing
+            ? "Compila tutti i campi (*) per salvare le modifiche."
+            : "Compila tutti i campi (*) per pianificare l'intervento."}
         </div>
       )}{" "}
       <button
-        onClick={() =>
-          onSave({
-            id: uid(),
-            room: isExtraPiani
-              ? PIANI.filter((pi) => pianiSelezionati.includes(pi.id))
-                  .map((pi) => pi.label)
-                  .join(", ")
-              : isFiltri
-                ? piano.label
-                : camResolved || roomTrim,
+        onClick={() => {
+          const roomVal = isExtraPiani
+            ? PIANI.filter((pi) => pianiSelezionati.includes(pi.id))
+                .map((pi) => pi.label)
+                .join(", ")
+            : isFiltri
+              ? piano.label
+              : camResolved || roomTrim;
+          const rooms = isExtraPiani
+            ? camereExtraPiani
+            : isFiltri
+              ? camereDelPiano
+              : null;
+          const payload = {
+            room: roomVal,
             category: cat,
             notes: isExtraPiani
-              ? notes.trim() ||
-                "Extra Piani — " +
-                  PIANI.filter((pi) => pianiSelezionati.includes(pi.id))
-                    .map((pi) => pi.label)
-                    .join(", ")
+              ? notes.trim() || "Extra Piani — " + roomVal
               : isFiltri
                 ? notes.trim() || CAT[cat].label + " " + piano.label
                 : notes.trim(),
             scheduledAt: dt
               ? new Date(isExtraPiani ? dt + "T00:00" : dt).getTime()
               : null,
-            scheduledUntil: isExtraPiani && dtTo ? new Date(dtTo + "T23:59").getTime() : null,
-            assignees,
-            status: "pending",
-            createdBy: user.name,
-            createdAt: Date.now(),
-            completedBy: null,
-            completedAt: null,
-            rooms: isExtraPiani
-              ? camereExtraPiani
+            scheduledUntil:
+              isExtraPiani && dtTo ? new Date(dtTo + "T23:59").getTime() : null,
+            piani: isExtraPiani
+              ? pianiSelezionati
               : isFiltri
-                ? camereDelPiano
-                : null,
-            roomsDone: {},
-          })
-        }
+                ? piano
+                  ? [piano.id]
+                  : []
+                : [],
+            assignees,
+            rooms,
+          };
+          if (editing) {
+            // se cambia l'elenco camere della checklist, l'avanzamento precedente non e' piu' valido
+            const roomsChanged =
+              JSON.stringify(rooms) !== JSON.stringify(initial.rooms || null);
+            onSave({
+              ...initial,
+              ...payload,
+              ...(roomsChanged ? { roomsDone: {} } : {}),
+            });
+          } else {
+            onSave({
+              ...payload,
+              id: uid(),
+              status: "pending",
+              createdBy: user.name,
+              createdAt: Date.now(),
+              completedBy: null,
+              completedAt: null,
+              roomsDone: {},
+            });
+          }
+        }}
         disabled={!canSave}
         style={{ ...ctaSt, background: "#1D4ED8", opacity: canSave ? 1 : 0.5 }}
       >
         {" "}
-        {I.cal} Pianifica intervento{" "}
+        {editing ? (
+          <>{I.edit} Salva modifiche</>
+        ) : (
+          <>{I.cal} Pianifica intervento</>
+        )}{" "}
       </button>{" "}
     </Sheet>
   );
@@ -4754,6 +4857,7 @@ function PlannedDetail({
   onClose,
   onSave,
   onDelete,
+  onEdit,
   onFlash,
   onPhoto,
 }) {
@@ -4795,6 +4899,12 @@ function PlannedDetail({
     user.role === "direttore_congressi" ||
     user.role === "sviluppatore" ||
     user.role === "reception";
+  const canEdit =
+    user.role === "governante"
+      ? p.createdBy === user.name
+      : ["direzione", "manutentore", "reception", "direttore_congressi", "sviluppatore"].includes(
+          user.role,
+        );
   const canOrderPiece =
     (user.role === "manutentore" ||
       user.role === "sviluppatore" ||
@@ -4906,29 +5016,60 @@ function PlannedDetail({
   return (
     <Sheet onClose={onClose} title={"Camera " + p.room + " · Intervento"}>
       {" "}
-      {canDelete && (
-        <button
-          onClick={() => {
-            if (confirm("Eliminare?")) onDelete(p.id);
-          }}
+      {(canEdit || canDelete) && (
+        <div
           style={{
             display: "flex",
-            alignItems: "center",
-            gap: 6,
+            gap: 8,
             marginLeft: "auto",
             marginBottom: 8,
-            background: "#FBE9E6",
-            border: "none",
-            color: "#B23A2E",
-            padding: "6px 12px",
-            borderRadius: 8,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: "pointer",
+            justifyContent: "flex-end",
           }}
         >
-          {I.trash} Elimina
-        </button>
+          {" "}
+          {canEdit && (
+            <button
+              onClick={() => onEdit(p.id)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "#EFF6FF",
+                border: "none",
+                color: "#1D4ED8",
+                padding: "6px 12px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {I.edit} Modifica
+            </button>
+          )}{" "}
+          {canDelete && (
+            <button
+              onClick={() => {
+                if (confirm("Eliminare?")) onDelete(p.id);
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                background: "#FBE9E6",
+                border: "none",
+                color: "#B23A2E",
+                padding: "6px 12px",
+                borderRadius: 8,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {I.trash} Elimina
+            </button>
+          )}{" "}
+        </div>
       )}{" "}
       {blk(
         null,
