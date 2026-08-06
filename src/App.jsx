@@ -1855,6 +1855,7 @@ export default function App() {
   );
   const [myWorkOpen, setMyWorkOpen] = useState(false);
   const [planningOpen, setPlanningOpen] = useState(false);
+  const [planningLavoriOpen, setPlanningLavoriOpen] = useState(false);
   const [urgenze, setUrgenze] = useState([]);
   const [camerePulite, setCamerePulite] = useState([]); // [{camera, fatta_da, fatta_il}]
   // Badge rosso con contatore sull'icona dell'app (come nelle app native),
@@ -2279,6 +2280,9 @@ export default function App() {
     isGestione || user.role === "manutentore";
   // ruoli che vedono il Planning Sale
   const vedePlanning = vedeInterventi;
+  // Planning Lavori: reception/direzione/direttore congressi lo vedono,
+  // i manutentori pure (per segnare i lavori fatti)
+  const vedePlanningLavori = isGestione || user.role === "manutentore";
   // camere pulite oggi: governante (spuntano), reception/direzione (controllano)
   const vedePulizie =
     user.role === "governante" ||
@@ -2423,6 +2427,18 @@ export default function App() {
             label: "Planning Sale",
             fn: () => {
               setPlanningOpen(true);
+              setMenuOpen(false);
+            },
+          },
+        ]
+      : []),
+    ...(vedePlanningLavori
+      ? [
+          {
+            icon: I.clock,
+            label: "Planning Lavori",
+            fn: () => {
+              setPlanningLavoriOpen(true);
               setMenuOpen(false);
             },
           },
@@ -3885,6 +3901,13 @@ export default function App() {
           onFlash={flash}
         />
       )}
+      {planningLavoriOpen && (
+        <PlanningLavori
+          user={user}
+          onClose={() => setPlanningLavoriOpen(false)}
+          onFlash={flash}
+        />
+      )}
       {toast && (
         <div
           style={{
@@ -3909,6 +3932,419 @@ export default function App() {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Planning Lavori (centro congressi) ────────────────────────────────────────
+// Foglio settimanale: righe = lavori, colonne = giorni Lun-Dom. Il direttore
+// congressi crea i lavori scegliendo i giorni (anche non consecutivi, anche
+// ripetuti sulla stessa riga); i manutentori toccano il riquadro del giorno
+// per segnarlo fatto, con una nota opzionale.
+const startOfWeekMonday = (d) => {
+  const r = startOfDayP(d);
+  const day = r.getDay(); // 0=Dom, 1=Lun, ...
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDaysP(r, diff);
+};
+const navBtnSt = {
+  padding: "8px 14px",
+  borderRadius: 10,
+  border: "1px solid #E4E0D6",
+  background: "#fff",
+  color: "#1B2420",
+  fontWeight: 700,
+  cursor: "pointer",
+  fontSize: 16,
+};
+const thPLSt = {
+  padding: 6,
+  fontSize: 11,
+  color: "#1B2420",
+  textAlign: "center",
+  borderBottom: "1px solid #E4E0D6",
+};
+const tdLabelSt = {
+  padding: "8px 10px",
+  fontSize: 13,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  borderBottom: "1px solid #F0EEE6",
+};
+const tdCellSt = {
+  padding: 4,
+  textAlign: "center",
+  borderBottom: "1px solid #F0EEE6",
+};
+function fmtDayShort(d) {
+  return `${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+function PlanningLavori({ user, onClose, onFlash }) {
+  const canCreate =
+    user.role === "direttore_congressi" || user.role === "sviluppatore";
+  const canMark =
+    user.role === "manutentore" ||
+    user.role === "direttore_congressi" ||
+    user.role === "sviluppatore";
+  const [lavori, setLavori] = useState([]);
+  const [weeks, setWeeks] = useState(1);
+  const [anchor, setAnchor] = useState(() => startOfWeekMonday(new Date()));
+  const [showAdd, setShowAdd] = useState(false);
+  const [markTarget, setMarkTarget] = useState(null);
+
+  const load = useCallback(async () => {
+    setLavori(await DB.loadPlanningLavori());
+  }, []);
+
+  useEffect(() => {
+    load();
+    const ch = supabase
+      .channel("planning_lavori_ch")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "planning_lavori" },
+        () => load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "planning_lavori_giorni" },
+        () => load(),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [load]);
+
+  const numDays = weeks * 7;
+  const days = Array.from({ length: numDays }, (_, i) => addDaysP(anchor, i));
+  const dayStrs = days.map(fmtISO);
+
+  const prev = () => setAnchor((a) => addDaysP(a, -numDays));
+  const next = () => setAnchor((a) => addDaysP(a, numDays));
+  const oggi = () => setAnchor(startOfWeekMonday(new Date()));
+
+  const visibleLavori = lavori
+    .map((l) => ({
+      ...l,
+      giorniVisibili: l.giorni.filter((g) => dayStrs.includes(g.data)),
+    }))
+    .filter((l) => l.giorniVisibili.length > 0)
+    .sort((a, b) => a.descrizione.localeCompare(b.descrizione, "it"));
+
+  const handleDelete = async (lavoro) => {
+    if (!canCreate) return;
+    if (
+      !window.confirm(
+        `Eliminare "${lavoro.descrizione}" da tutto il planning?`,
+      )
+    )
+      return;
+    await DB.eliminaPlanningLavoro(lavoro.id);
+    onFlash("Lavoro eliminato");
+    await load();
+  };
+
+  return (
+    <FullPage onClose={onClose} title="Planning Lavori">
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {[1, 2].map((n) => (
+          <button
+            key={n}
+            onClick={() => setWeeks(n)}
+            style={{
+              flex: 1,
+              padding: "9px 6px",
+              borderRadius: 10,
+              border: "1px solid #E4E0D6",
+              background: weeks === n ? "#0E5C49" : "#fff",
+              color: weeks === n ? "#fff" : "#1B2420",
+              fontWeight: 600,
+              fontSize: 13,
+              cursor: "pointer",
+            }}
+          >
+            {n === 1 ? "1 settimana" : "2 settimane"}
+          </button>
+        ))}
+      </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: 12,
+        }}
+      >
+        <button onClick={prev} style={navBtnSt}>
+          ‹
+        </button>
+        <button
+          onClick={oggi}
+          style={{
+            ...navBtnSt,
+            flex: "0 0 auto",
+            padding: "6px 14px",
+            fontSize: 12,
+          }}
+        >
+          {fmtDayShort(days[0])} – {fmtDayShort(days[days.length - 1])}
+        </button>
+        <button onClick={next} style={navBtnSt}>
+          ›
+        </button>
+      </div>
+
+      {canCreate && (
+        <button
+          onClick={() => setShowAdd(true)}
+          style={{ ...ctaSt, marginBottom: 14 }}
+        >
+          {I.plus} Nuovo lavoro
+        </button>
+      )}
+
+      <div style={{ overflowX: "auto" }}>
+        <table
+          style={{
+            borderCollapse: "collapse",
+            width: "100%",
+            minWidth: numDays * 60,
+          }}
+        >
+          <thead>
+            <tr>
+              <th style={thPLSt}></th>
+              {days.map((d) => (
+                <th key={fmtISO(d)} style={thPLSt}>
+                  <div style={{ fontSize: 10, color: "#8A8A85" }}>
+                    {WD_IT[d.getDay()]}
+                  </div>
+                  <div>
+                    {d.getDate()}/{d.getMonth() + 1}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleLavori.map((l) => (
+              <tr key={l.id}>
+                <td style={tdLabelSt}>
+                  {l.descrizione}
+                  {canCreate && (
+                    <button
+                      onClick={() => handleDelete(l)}
+                      style={{
+                        marginLeft: 6,
+                        background: "none",
+                        border: "none",
+                        color: "#B23A2E",
+                        cursor: "pointer",
+                        fontSize: 12,
+                      }}
+                    >
+                      {I.trash}
+                    </button>
+                  )}
+                </td>
+                {days.map((d) => {
+                  const ds = fmtISO(d);
+                  const g = l.giorni.find((x) => x.data === ds);
+                  return (
+                    <td key={ds} style={tdCellSt}>
+                      {g && (
+                        <button
+                          onClick={() =>
+                            canMark && setMarkTarget({ lavoro: l, giorno: g })
+                          }
+                          title={g.note || ""}
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 8,
+                            border: "none",
+                            cursor: canMark ? "pointer" : "default",
+                            background: g.fatto ? "#2E7D5B" : "#FCD34D",
+                            color: g.fatto ? "#fff" : "#7a5212",
+                            fontSize: 15,
+                          }}
+                        >
+                          {g.fatto ? "✓" : "•"}
+                        </button>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+            {visibleLavori.length === 0 && (
+              <tr>
+                <td
+                  colSpan={numDays + 1}
+                  style={{
+                    padding: 20,
+                    textAlign: "center",
+                    color: "#8A8A85",
+                    fontSize: 13,
+                  }}
+                >
+                  Nessun lavoro in questo periodo.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showAdd && (
+        <AddPlanningLavoroSheet
+          days={days}
+          user={user}
+          onClose={() => setShowAdd(false)}
+          onSaved={async () => {
+            setShowAdd(false);
+            onFlash("Lavoro creato ✓");
+            await load();
+          }}
+        />
+      )}
+      {markTarget && (
+        <MarkGiornoSheet
+          target={markTarget}
+          user={user}
+          onClose={() => setMarkTarget(null)}
+          onSaved={async () => {
+            setMarkTarget(null);
+            await load();
+          }}
+        />
+      )}
+    </FullPage>
+  );
+}
+
+function AddPlanningLavoroSheet({ days, user, onClose, onSaved }) {
+  const [descrizione, setDescrizione] = useState("");
+  const [selected, setSelected] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const toggle = (ds) =>
+    setSelected((s) =>
+      s.includes(ds) ? s.filter((x) => x !== ds) : [...s, ds],
+    );
+  const save = async () => {
+    if (!descrizione.trim() || selected.length === 0 || saving) return;
+    setSaving(true);
+    const ok = await DB.creaPlanningLavoro(
+      descrizione.trim(),
+      selected,
+      user.name,
+    );
+    setSaving(false);
+    if (ok) onSaved();
+  };
+  return (
+    <Sheet onClose={onClose} title="Nuovo lavoro">
+      <Field label="Descrizione *">
+        <input
+          style={inputSt}
+          value={descrizione}
+          onChange={(e) => setDescrizione(e.target.value)}
+          placeholder="Es. Controllo caldaia"
+          autoFocus
+        />
+      </Field>
+      <Field label="Giorni *">
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {days.map((d) => {
+            const ds = fmtISO(d);
+            const on = selected.includes(ds);
+            return (
+              <button
+                key={ds}
+                onClick={() => toggle(ds)}
+                style={{
+                  padding: "8px 10px",
+                  borderRadius: 9,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: on ? "1.5px solid #0E5C49" : "1.5px solid #E4E0D6",
+                  background: on ? "#0E5C49" : "#fff",
+                  color: on ? "#fff" : "#1B2420",
+                  cursor: "pointer",
+                }}
+              >
+                {WD_IT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
+              </button>
+            );
+          })}
+        </div>
+      </Field>
+      <button
+        onClick={save}
+        disabled={!descrizione.trim() || selected.length === 0 || saving}
+        style={{
+          ...ctaSt,
+          opacity:
+            !descrizione.trim() || selected.length === 0 || saving ? 0.5 : 1,
+        }}
+      >
+        {I.check} Crea lavoro su {selected.length} giorn
+        {selected.length === 1 ? "o" : "i"}
+      </button>
+    </Sheet>
+  );
+}
+
+function MarkGiornoSheet({ target, user, onClose, onSaved }) {
+  const { lavoro, giorno } = target;
+  const [note, setNote] = useState(giorno.note || "");
+  const [saving, setSaving] = useState(false);
+  const markDone = async () => {
+    setSaving(true);
+    await DB.segnaGiornoLavoroFatto(giorno.id, user.name, note.trim());
+    setSaving(false);
+    onSaved();
+  };
+  const undo = async () => {
+    setSaving(true);
+    await DB.annullaGiornoLavoroFatto(giorno.id);
+    setSaving(false);
+    onSaved();
+  };
+  return (
+    <Sheet onClose={onClose} title={lavoro.descrizione}>
+      <div style={{ fontSize: 13, color: "#8A8A85", marginBottom: 10 }}>
+        {giorno.data}
+      </div>
+      {giorno.fatto ? (
+        <>
+          <div style={{ fontSize: 13, marginBottom: 10 }}>
+            Fatto da <strong>{giorno.fattoDa}</strong>
+            {giorno.note ? <> — {giorno.note}</> : null}
+          </div>
+          <button
+            onClick={undo}
+            disabled={saving}
+            style={{ ...ctaSt, background: "#E4E0D6", color: "#1B2420" }}
+          >
+            Annulla completamento
+          </button>
+        </>
+      ) : (
+        <>
+          <Field label="Note (opzionale)">
+            <input
+              style={inputSt}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Es. rimandato al pomeriggio"
+            />
+          </Field>
+          <button onClick={markDone} disabled={saving} style={ctaSt}>
+            {I.check} Segna fatto
+          </button>
+        </>
+      )}
+    </Sheet>
   );
 }
 

@@ -331,6 +331,86 @@ export const DB = {
     if (error) console.error(error);
   },
 
+  // ── Planning Lavori (centro congressi) ────────────────────────────────
+  async loadPlanningLavori() {
+    const { data: lavori, error: e1 } = await supabase
+      .from("planning_lavori")
+      .select("*");
+    if (e1) {
+      console.error(e1);
+      return [];
+    }
+    const { data: giorni, error: e2 } = await supabase
+      .from("planning_lavori_giorni")
+      .select("*");
+    if (e2) {
+      console.error(e2);
+      return [];
+    }
+    return lavori.map((l) => ({
+      id: l.id,
+      descrizione: l.descrizione,
+      createdBy: l.creato_da,
+      createdAt: l.creato_il ? new Date(l.creato_il).getTime() : Date.now(),
+      giorni: giorni
+        .filter((g) => g.lavoro_id === l.id)
+        .map((g) => ({
+          id: g.id,
+          data: g.data,
+          fatto: g.fatto,
+          fattoDa: g.fatto_da,
+          fattoIl: g.fatto_il ? new Date(g.fatto_il).getTime() : null,
+          note: g.note,
+        })),
+    }));
+  },
+  async creaPlanningLavoro(descrizione, dateArr, createdBy) {
+    const { data: lavoro, error: e1 } = await supabase
+      .from("planning_lavori")
+      .insert({ descrizione, creato_da: createdBy })
+      .select()
+      .single();
+    if (e1) {
+      console.error(e1);
+      return false;
+    }
+    const rows = dateArr.map((data) => ({ lavoro_id: lavoro.id, data }));
+    const { error: e2 } = await supabase
+      .from("planning_lavori_giorni")
+      .insert(rows);
+    if (e2) console.error(e2);
+    return !e2;
+  },
+  async segnaGiornoLavoroFatto(giornoId, fattoDa, note) {
+    const { error } = await supabase
+      .from("planning_lavori_giorni")
+      .update({
+        fatto: true,
+        fatto_da: fattoDa,
+        fatto_il: new Date().toISOString(),
+        note: note || null,
+      })
+      .eq("id", giornoId);
+    if (error) console.error(error);
+    return !error;
+  },
+  async annullaGiornoLavoroFatto(giornoId) {
+    const { error } = await supabase
+      .from("planning_lavori_giorni")
+      .update({ fatto: false, fatto_da: null, fatto_il: null })
+      .eq("id", giornoId);
+    if (error) console.error(error);
+    return !error;
+  },
+  async eliminaPlanningLavoro(id) {
+    const { error } = await supabase
+      .from("planning_lavori")
+      .delete()
+      .eq("id", id);
+    if (error) console.error(error);
+    return !error;
+  },
+
   // ── Richieste urgenti (allarme broadcast a tutti i manutentori) ──────────
   async loadUrgenze() {
     const { data, error } = await supabase
