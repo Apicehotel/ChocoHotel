@@ -4184,12 +4184,22 @@ function PlanningLavori({ user, onClose, onFlash }) {
                                   borderRadius: 8,
                                   border: "none",
                                   cursor: canMark ? "pointer" : "default",
-                                  background: g.fatto ? "#2E7D5B" : "#FCD34D",
-                                  color: g.fatto ? "#fff" : "#7a5212",
+                                  background:
+                                    g.stato === "fatto"
+                                      ? "#2E7D5B"
+                                      : g.stato === "da_finire"
+                                        ? "#D97706"
+                                        : "#FCD34D",
+                                  color:
+                                    g.stato === "aperto" ? "#7a5212" : "#fff",
                                   fontSize: 15,
                                 }}
                               >
-                                {g.fatto ? "✓" : "•"}
+                                {g.stato === "fatto"
+                                  ? "✓"
+                                  : g.stato === "da_finire"
+                                    ? "~"
+                                    : "•"}
                               </button>
                             )}
                           </td>
@@ -4268,8 +4278,8 @@ function AddPlanningLavoroSheet({ days, user, onClose, onSaved }) {
   return (
     <Sheet onClose={onClose} title="Nuovo lavoro">
       <Field label="Descrizione *">
-        <input
-          style={inputSt}
+        <textarea
+          style={{ ...inputSt, minHeight: 90, resize: "vertical", fontFamily: "inherit" }}
           value={descrizione}
           onChange={(e) => setDescrizione(e.target.value)}
           placeholder="Es. Controllo caldaia"
@@ -4322,52 +4332,54 @@ function MarkGiornoSheet({ target, user, onClose, onSaved }) {
   const { lavoro, giorno } = target;
   const [note, setNote] = useState(giorno.note || "");
   const [saving, setSaving] = useState(false);
-  const markDone = async () => {
+  const setStato = async (stato) => {
     setSaving(true);
-    await DB.segnaGiornoLavoroFatto(giorno.id, user.name, note.trim());
+    await DB.impostaStatoGiornoLavoro(giorno.id, stato, user.name, note.trim());
     setSaving(false);
     onSaved();
   };
-  const undo = async () => {
-    setSaving(true);
-    await DB.annullaGiornoLavoroFatto(giorno.id);
-    setSaving(false);
-    onSaved();
-  };
+  const STATO_LABEL = { aperto: "Da fare", da_finire: "Da finire", fatto: "Fatto" };
   return (
     <Sheet onClose={onClose} title={lavoro.descrizione}>
       <div style={{ fontSize: 13, color: "#8A8A85", marginBottom: 10 }}>
         {giorno.data}
       </div>
-      {giorno.fatto ? (
-        <>
-          <div style={{ fontSize: 13, marginBottom: 10 }}>
-            Fatto da <strong>{giorno.fattoDa}</strong>
-            {giorno.note ? <> — {giorno.note}</> : null}
-          </div>
+      {giorno.stato !== "aperto" && (
+        <div style={{ fontSize: 13, marginBottom: 10 }}>
+          <strong>{STATO_LABEL[giorno.stato]}</strong>
+          {giorno.fattoDa ? <> — da {giorno.fattoDa}</> : null}
+          {giorno.note ? <> · {giorno.note}</> : null}
+        </div>
+      )}
+      <Field label="Note (opzionale)">
+        <textarea
+          style={{ ...inputSt, minHeight: 70, resize: "vertical", fontFamily: "inherit" }}
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Es. rimandato al pomeriggio"
+        />
+      </Field>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <button
+          onClick={() => setStato("da_finire")}
+          disabled={saving}
+          style={{ ...ctaSt, background: "#D97706" }}
+        >
+          ~ Segna da finire
+        </button>
+        <button onClick={() => setStato("fatto")} disabled={saving} style={ctaSt}>
+          {I.check} Segna fatto
+        </button>
+        {giorno.stato !== "aperto" && (
           <button
-            onClick={undo}
+            onClick={() => setStato("aperto")}
             disabled={saving}
             style={{ ...ctaSt, background: "#E4E0D6", color: "#1B2420" }}
           >
-            Annulla completamento
+            Riporta a Da fare
           </button>
-        </>
-      ) : (
-        <>
-          <Field label="Note (opzionale)">
-            <input
-              style={inputSt}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Es. rimandato al pomeriggio"
-            />
-          </Field>
-          <button onClick={markDone} disabled={saving} style={ctaSt}>
-            {I.check} Segna fatto
-          </button>
-        </>
-      )}
+        )}
+      </div>
     </Sheet>
   );
 }

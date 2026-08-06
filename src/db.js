@@ -357,7 +357,7 @@ export const DB = {
         .map((g) => ({
           id: g.id,
           data: g.data,
-          fatto: g.fatto,
+          stato: g.stato || (g.fatto ? "fatto" : "aperto"),
           fattoDa: g.fatto_da,
           fattoIl: g.fatto_il ? new Date(g.fatto_il).getTime() : null,
           note: g.note,
@@ -381,23 +381,16 @@ export const DB = {
     if (e2) console.error(e2);
     return !e2;
   },
-  async segnaGiornoLavoroFatto(giornoId, fattoDa, note) {
+  async impostaStatoGiornoLavoro(giornoId, stato, chi, note) {
     const { error } = await supabase
       .from("planning_lavori_giorni")
       .update({
-        fatto: true,
-        fatto_da: fattoDa,
-        fatto_il: new Date().toISOString(),
-        note: note || null,
+        stato,
+        fatto: stato === "fatto",
+        fatto_da: stato === "aperto" ? null : chi,
+        fatto_il: stato === "aperto" ? null : new Date().toISOString(),
+        note: stato === "aperto" ? null : note || null,
       })
-      .eq("id", giornoId);
-    if (error) console.error(error);
-    return !error;
-  },
-  async annullaGiornoLavoroFatto(giornoId) {
-    const { error } = await supabase
-      .from("planning_lavori_giorni")
-      .update({ fatto: false, fatto_da: null, fatto_il: null })
       .eq("id", giornoId);
     if (error) console.error(error);
     return !error;
