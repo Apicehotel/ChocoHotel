@@ -4102,98 +4102,122 @@ function PlanningLavori({ user, onClose, onFlash }) {
         </button>
       )}
 
-      <div style={{ overflowX: "auto" }}>
-        <table
-          style={{
-            borderCollapse: "collapse",
-            width: "100%",
-            minWidth: numDays * 60,
-          }}
-        >
-          <thead>
-            <tr>
-              <th style={thPLSt}></th>
-              {days.map((d) => (
-                <th key={fmtISO(d)} style={thPLSt}>
-                  <div style={{ fontSize: 10, color: "#8A8A85" }}>
-                    {WD_IT[d.getDay()]}
-                  </div>
-                  <div>
-                    {d.getDate()}/{d.getMonth() + 1}
-                  </div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visibleLavori.map((l) => (
-              <tr key={l.id}>
-                <td style={tdLabelSt}>
-                  {l.descrizione}
-                  {canCreate && (
-                    <button
-                      onClick={() => handleDelete(l)}
-                      style={{
-                        marginLeft: 6,
-                        background: "none",
-                        border: "none",
-                        color: "#B23A2E",
-                        cursor: "pointer",
-                        fontSize: 12,
-                      }}
-                    >
-                      {I.trash}
-                    </button>
-                  )}
-                </td>
-                {days.map((d) => {
-                  const ds = fmtISO(d);
-                  const g = l.giorni.find((x) => x.data === ds);
-                  return (
-                    <td key={ds} style={tdCellSt}>
-                      {g && (
-                        <button
-                          onClick={() =>
-                            canMark && setMarkTarget({ lavoro: l, giorno: g })
-                          }
-                          title={g.note || ""}
-                          style={{
-                            width: 34,
-                            height: 34,
-                            borderRadius: 8,
-                            border: "none",
-                            cursor: canMark ? "pointer" : "default",
-                            background: g.fatto ? "#2E7D5B" : "#FCD34D",
-                            color: g.fatto ? "#fff" : "#7a5212",
-                            fontSize: 15,
-                          }}
-                        >
-                          {g.fatto ? "✓" : "•"}
-                        </button>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-            {visibleLavori.length === 0 && (
-              <tr>
-                <td
-                  colSpan={numDays + 1}
-                  style={{
-                    padding: 20,
-                    textAlign: "center",
-                    color: "#8A8A85",
-                    fontSize: 13,
-                  }}
-                >
-                  Nessun lavoro in questo periodo.
-                </td>
-              </tr>
+      {Array.from({ length: weeks }, (_, wi) =>
+        days.slice(wi * 7, wi * 7 + 7),
+      ).map((weekDays, wi) => {
+        const weekLavori = visibleLavori.filter((l) =>
+          l.giorniVisibili.some((g) => weekDays.some((d) => fmtISO(d) === g.data)),
+        );
+        return (
+          <div key={wi} style={{ marginBottom: weeks > 1 ? 20 : 0 }}>
+            {weeks > 1 && (
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#8A8A85",
+                  marginBottom: 6,
+                }}
+              >
+                {fmtDayShort(weekDays[0])} – {fmtDayShort(weekDays[6])}
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  borderCollapse: "collapse",
+                  width: "100%",
+                  minWidth: 7 * 60,
+                }}
+              >
+                <thead>
+                  <tr>
+                    <th style={thPLSt}></th>
+                    {weekDays.map((d) => (
+                      <th key={fmtISO(d)} style={thPLSt}>
+                        <div style={{ fontSize: 10, color: "#8A8A85" }}>
+                          {WD_IT[d.getDay()]}
+                        </div>
+                        <div>
+                          {d.getDate()}/{d.getMonth() + 1}
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {weekLavori.map((l) => (
+                    <tr key={l.id}>
+                      <td style={tdLabelSt}>
+                        {l.descrizione}
+                        {canCreate && (
+                          <button
+                            onClick={() => handleDelete(l)}
+                            style={{
+                              marginLeft: 6,
+                              background: "none",
+                              border: "none",
+                              color: "#B23A2E",
+                              cursor: "pointer",
+                              fontSize: 12,
+                            }}
+                          >
+                            {I.trash}
+                          </button>
+                        )}
+                      </td>
+                      {weekDays.map((d) => {
+                        const ds = fmtISO(d);
+                        const g = l.giorni.find((x) => x.data === ds);
+                        return (
+                          <td key={ds} style={tdCellSt}>
+                            {g && (
+                              <button
+                                onClick={() =>
+                                  canMark &&
+                                  setMarkTarget({ lavoro: l, giorno: g })
+                                }
+                                title={g.note || ""}
+                                style={{
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: 8,
+                                  border: "none",
+                                  cursor: canMark ? "pointer" : "default",
+                                  background: g.fatto ? "#2E7D5B" : "#FCD34D",
+                                  color: g.fatto ? "#fff" : "#7a5212",
+                                  fontSize: 15,
+                                }}
+                              >
+                                {g.fatto ? "✓" : "•"}
+                              </button>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                  {weekLavori.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={8}
+                        style={{
+                          padding: 20,
+                          textAlign: "center",
+                          color: "#8A8A85",
+                          fontSize: 13,
+                        }}
+                      >
+                        Nessun lavoro in questa settimana.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
 
       {showAdd && (
         <AddPlanningLavoroSheet
