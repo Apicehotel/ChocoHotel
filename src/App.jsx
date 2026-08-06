@@ -3936,7 +3936,9 @@ function compareRoom(a, b) {
 function Card({ it, onOpen, onPhoto }) {
   const u = URG[it.urgency] || URG.media;
   const st = it.status === "tecnico"
-    ? { l: "Tecnico contattato", bg: "#FEF3C7", fg: "#92400E" }
+    ? it.tecnicoMsgSid
+      ? { l: "Tecnico contattato", bg: "#FEF3C7", fg: "#92400E" }
+      : { l: "Tecnico assegnato", bg: "#F1E4CC", fg: "#7a5212" }
     : it.tecnicoAskedBy && it.status === "todo"
       ? { l: "Contattare tecnico", bg: "#FEF3C7", fg: "#92400E" }
       : {
@@ -6651,7 +6653,7 @@ function Detail({
           "#FFFBEB",
           "#FCD34D",
           <>
-            {dlbl("Tecnico contattato", "#92400E")}
+            {dlbl(it.tecnicoMsgSid ? "Tecnico contattato" : "Tecnico assegnato", "#92400E")}
             <div
               style={{
                 fontSize: 15,
