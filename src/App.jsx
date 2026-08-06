@@ -7306,7 +7306,7 @@ function Detail({
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 7 }}
                 >
-                  {Date.now() < new Date("2026-08-06T12:00:00+02:00").getTime() && (
+                  {Date.now() < new Date("2026-08-07T12:00:00+02:00").getTime() && (
                     <div
                       style={{
                         background: "#FEF3C7",
