@@ -7285,7 +7285,7 @@ function Detail({
                     opacity: askingTecnico ? 0.6 : 1,
                   }}
                 >
-                  {I.msg} Contatta tecnico
+                  {I.msg} Chiedi un tecnico
                 </button>
               )}
               {canReqT &&
@@ -7300,7 +7300,7 @@ function Detail({
                       padding: "11px 6px",
                     }}
                   >
-                    {I.phone} Serve tecnico
+                    {I.phone} {it.tecnicoAskedBy ? "Scegli tecnico" : "Serve tecnico"}
                   </button>
                 ) : (
                   <div
