@@ -6834,6 +6834,23 @@ function Detail({
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 7 }}
                 >
+                  {Date.now() < new Date("2026-08-06T12:00:00+02:00").getTime() && (
+                    <div
+                      style={{
+                        background: "#FEF3C7",
+                        border: "1.5px solid #FCD34D",
+                        borderRadius: 12,
+                        padding: "11px 13px",
+                        fontSize: 12.5,
+                        color: "#92400E",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      ⚠️ Il contatto WhatsApp al tecnico è momentaneamente
+                      disattivato (in attesa di approvazione del messaggio).
+                      Per ora chiama il tecnico direttamente.
+                    </div>
+                  )}
                   {it.photoBefore && (
                     <button
                       onClick={() => onPhoto(it.photoBefore)}
