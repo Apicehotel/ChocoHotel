@@ -7306,7 +7306,8 @@ function Detail({
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 7 }}
                 >
-                  {Date.now() < new Date("2026-08-07T12:00:00+02:00").getTime() && (
+                  {it.photoBefore &&
+                    Date.now() < new Date("2026-08-07T12:00:00+02:00").getTime() && (
                     <div
                       style={{
                         background: "#FEF3C7",
@@ -7318,9 +7319,9 @@ function Detail({
                         lineHeight: 1.4,
                       }}
                     >
-                      ⚠️ Il contatto WhatsApp al tecnico è momentaneamente
-                      disattivato (in attesa di approvazione del messaggio).
-                      Per ora chiama il tecnico direttamente.
+                      ⚠️ L'invio della foto al tecnico è ancora in attesa di
+                      approvazione. Il messaggio con camera e problema parte
+                      comunque (senza foto).
                     </div>
                   )}
                   {it.photoBefore && (
