@@ -1912,13 +1912,39 @@ export default function App() {
       DB.loadPlanned(),
       DB.loadTecnici(),
     ]);
-    setItems(sortItems(its));
+    // le segnalazioni ancora in coda locale (non sincronizzate) restano
+    // visibili finche' non vanno a buon fine, anche dopo un refresh/reload
+    const pending = DB.getPendingItems().filter(
+      (p) => !its.some((i) => i.id === p.id),
+    );
+    setItems(sortItems([...its, ...pending]));
     setPlanned(sortPlanned(plans));
     setTec(tecs);
   }, []);
   const refreshUrgenze = useCallback(async () => {
     setUrgenze(await DB.loadUrgenze());
   }, []);
+  // Riprova a sincronizzare le segnalazioni rimaste in coda locale: ogni 30s
+  // e appena torna la connessione. Se qualcosa va a buon fine, aggiorna la
+  // lista cosi' il badge "in attesa" sparisce.
+  useEffect(() => {
+    const tryFlush = async () => {
+      const res = await DB.retryPendingItems();
+      if (res.retried > 0) {
+        flash(
+          `✅ ${res.retried} segnalazion${res.retried === 1 ? "e" : "i"} sincronizzat${res.retried === 1 ? "a" : "e"}`,
+        );
+        refresh();
+      }
+    };
+    tryFlush();
+    const interval = setInterval(tryFlush, 30000);
+    window.addEventListener("online", tryFlush);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("online", tryFlush);
+    };
+  }, [refresh]);
   const refreshCamerePulite = useCallback(async () => {
     setCamerePulite(await DB.loadCamerePulite());
   }, []);
@@ -1980,7 +2006,10 @@ export default function App() {
   };
   const saveItem = async (m) => {
     setItems((prev) => sortItems([...prev.filter((i) => i.id !== m.id), m]));
-    await DB.saveItem(m);
+    const res = await DB.saveItem(m);
+    if (res && res.pending) {
+      flash("⏳ Salvata sul telefono, verrà sincronizzata appena possibile", false);
+    }
     refresh();
   };
   const removeItem = async (id) => {
@@ -4407,7 +4436,9 @@ function compareRoom(a, b) {
 }
 function Card({ it, onOpen, onPhoto }) {
   const u = URG[it.urgency] || URG.media;
-  const st = it.status === "tecnico"
+  const st = it.pendingSync
+    ? { l: "⏳ In attesa di sincronizzazione", bg: "#FBE9E6", fg: "#B23A2E" }
+    : it.status === "tecnico"
     ? it.tecnicoMsgSid
       ? { l: "Tecnico contattato", bg: "#FEF3C7", fg: "#92400E" }
       : { l: "Tecnico assegnato", bg: "#F1E4CC", fg: "#7a5212" }

@@ -5,6 +5,29 @@ const SUPABASE_KEY = "sb_publishable_XTYCLV5jSdk3ztG7PNuL_Q_1zu3tDwJ";
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// ── Coda locale per salvataggi falliti (segnalazioni) ────────────────────────
+// Se il salvataggio su Supabase fallisce (rete assente, errore server, bug
+// lato DB come successo il 6/8 con il trigger del report), la segnalazione
+// NON va persa: resta in questa coda su localStorage, visibile in app con
+// un badge "in attesa", e viene ritentata da sola ogni 30s + a ogni ritorno
+// online, finche' non va a buon fine.
+const PENDING_KEY = "hg_pending_segnalazioni";
+
+function loadPendingQueue() {
+  try {
+    return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+function savePendingQueue(q) {
+  try {
+    localStorage.setItem(PENDING_KEY, JSON.stringify(q));
+  } catch (e) {
+    console.error("Errore salvataggio coda locale:", e);
+  }
+}
+
 // ── Mappatura DB <-> forma usata dall'app ────────────────────────────────────
 // L'app usa oggetti "item" (segnalazioni) e "planned" (interventi) con chiavi
 // camelCase. Il DB usa snake_case. Queste funzioni traducono avanti e indietro.
@@ -195,7 +218,58 @@ export const DB = {
   async saveItem(it) {
     const row = itemToRow(it);
     const { error } = await supabase.from("segnalazioni").upsert(row);
-    if (error) console.error(error);
+    if (error) {
+      console.error(error);
+      const q = loadPendingQueue();
+      const idx = q.findIndex((p) => p.item.id === it.id);
+      const entry = {
+        item: it,
+        error: error.message || String(error),
+        attempts: (idx >= 0 ? q[idx].attempts : 0) + 1,
+        updatedAt: Date.now(),
+      };
+      if (idx >= 0) q[idx] = entry;
+      else q.push(entry);
+      savePendingQueue(q);
+      return { ok: false, pending: true };
+    }
+    // se era in coda locale ed ora e' andata a buon fine, la togliamo
+    const q = loadPendingQueue().filter((p) => p.item.id !== it.id);
+    savePendingQueue(q);
+    return { ok: true, pending: false };
+  },
+  // Segnalazioni in attesa di sincronizzazione (salvate solo sul telefono).
+  getPendingItems() {
+    return loadPendingQueue().map((p) => ({
+      ...p.item,
+      pendingSync: true,
+      pendingAttempts: p.attempts,
+      pendingError: p.error,
+    }));
+  },
+  // Riprova a salvare tutte le segnalazioni in coda. Ritorna quante sono
+  // andate a buon fine e quante restano ancora in attesa.
+  async retryPendingItems() {
+    const q = loadPendingQueue();
+    if (q.length === 0) return { retried: 0, stillPending: 0 };
+    const stillFailing = [];
+    let retried = 0;
+    for (const entry of q) {
+      const row = itemToRow(entry.item);
+      const { error } = await supabase.from("segnalazioni").upsert(row);
+      if (error) {
+        stillFailing.push({
+          ...entry,
+          error: error.message || String(error),
+          attempts: entry.attempts + 1,
+          updatedAt: Date.now(),
+        });
+      } else {
+        retried++;
+      }
+    }
+    savePendingQueue(stillFailing);
+    return { retried, stillPending: stillFailing.length };
   },
   async deleteItem(id) {
     const { error } = await supabase.from("segnalazioni").delete().eq("id", id);
