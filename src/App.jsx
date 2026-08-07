@@ -7306,24 +7306,6 @@ function Detail({
                 <div
                   style={{ display: "flex", flexDirection: "column", gap: 7 }}
                 >
-                  {it.photoBefore &&
-                    Date.now() < new Date("2026-08-07T12:00:00+02:00").getTime() && (
-                    <div
-                      style={{
-                        background: "#FEF3C7",
-                        border: "1.5px solid #FCD34D",
-                        borderRadius: 12,
-                        padding: "11px 13px",
-                        fontSize: 12.5,
-                        color: "#92400E",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      ⚠️ L'invio della foto al tecnico è ancora in attesa di
-                      approvazione. Il messaggio con camera e problema parte
-                      comunque (senza foto).
-                    </div>
-                  )}
                   {it.photoBefore && (
                     <button
                       onClick={() => onPhoto(it.photoBefore)}
