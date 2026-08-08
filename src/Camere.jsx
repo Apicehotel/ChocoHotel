@@ -572,8 +572,8 @@ export default function Camere({ user, onFlash }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-            gap: 12,
+            gridTemplateColumns: "repeat(auto-fill, minmax(88px, 1fr))",
+            gap: 10,
           }}
         >
           {sorted.map((c) => (
@@ -606,10 +606,10 @@ function CameraCard({ c, onClick }) {
       style={{
         position: "relative",
         textAlign: "center",
-        padding: "16px 12px",
-        borderRadius: 16,
+        padding: "12px 8px",
+        borderRadius: 15,
         cursor: "pointer",
-        minHeight: 128,
+        minHeight: 104,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -624,14 +624,14 @@ function CameraCard({ c, onClick }) {
         <span
           style={{
             position: "absolute",
-            top: 9,
-            left: 9,
-            fontSize: 9,
+            top: 7,
+            left: 7,
+            fontSize: 8,
             fontWeight: 800,
             color: "#fff",
             background: "#B23A2E",
-            padding: "3px 8px",
-            borderRadius: 7,
+            padding: "2px 6px",
+            borderRadius: 6,
             letterSpacing: 0.3,
           }}
         >
@@ -641,17 +641,17 @@ function CameraCard({ c, onClick }) {
       <span
         style={{
           position: "absolute",
-          top: 9,
-          right: 9,
-          width: 23,
-          height: 23,
+          top: 7,
+          right: 7,
+          width: 19,
+          height: 19,
           borderRadius: "50%",
           background: fatta ? "#2E7D5B" : "transparent",
           color: "#fff",
           display: fatta ? "flex" : "none",
           alignItems: "center",
           justifyContent: "center",
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: 800,
         }}
       >
@@ -662,10 +662,10 @@ function CameraCard({ c, onClick }) {
           title="Ci sono dettagli"
           style={{
             position: "absolute",
-            top: 11,
-            right: 11,
-            width: 9,
-            height: 9,
+            top: 9,
+            right: 9,
+            width: 8,
+            height: 8,
             borderRadius: "50%",
             background: "#B9842F",
           }}
@@ -673,7 +673,7 @@ function CameraCard({ c, onClick }) {
       )}
       <div
         style={{
-          fontSize: 24,
+          fontSize: 19,
           fontWeight: 800,
           color: fatta ? "#2E7D5B" : "#1B2420",
         }}
@@ -683,9 +683,9 @@ function CameraCard({ c, onClick }) {
       {c.tipologia && (
         <div
           style={{
-            fontSize: 11.5,
+            fontSize: 9.5,
             color: "#9CA39C",
-            marginTop: 3,
+            marginTop: 1,
             whiteSpace: "nowrap",
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -698,12 +698,12 @@ function CameraCard({ c, onClick }) {
       <span
         style={{
           display: "inline-block",
-          fontSize: 10,
+          fontSize: 8.5,
           fontWeight: 800,
-          padding: "4px 9px",
-          borderRadius: 7,
+          padding: "3px 6px",
+          borderRadius: 6,
           letterSpacing: 0.2,
-          marginTop: 11,
+          marginTop: 8,
           maxWidth: "100%",
           overflow: "hidden",
           textOverflow: "ellipsis",
