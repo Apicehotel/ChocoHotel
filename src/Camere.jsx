@@ -174,17 +174,18 @@ function soloData(v) {
   return s;
 }
 
-// Classifica una singola riga del file in base alle colonne Arrivo/Partenza
-// (le piu' affidabili), usando "Stato soggiorno" solo per distinguere una
-// camera occupata senza movimenti (fermata) da una riga vuota.
+// Classifica una singola riga del file in base al TESTO della colonna
+// "Stato soggiorno" (es. "In arrivo", "In arrivo (14:00)", "In partenza",
+// "In soggiorno"). NON usare la presenza delle colonne Arrivo/Partenza: sono
+// SEMPRE valorizzate per qualunque prenotazione (rappresentano l'intero
+// check-in/check-out del soggiorno, non "il movimento di oggi"), quindi
+// classificherebbero quasi ogni camera occupata come b2b per errore.
 function classificaRiga(row) {
-  const arr = String(row[4] ?? "").trim();
-  const part = String(row[5] ?? "").trim();
-  if (part && arr) return ["partenza", "arrivo"]; // stesso giorno, sulla stessa riga
-  if (part) return ["partenza"];
-  if (arr) return ["arrivo"];
-  const statoTxt = String(row[3] ?? "").trim();
-  if (statoTxt) return ["soggiorno"];
+  const statoTxt = String(row[3] ?? "").trim().toLowerCase();
+  if (!statoTxt) return [];
+  if (statoTxt.includes("partenza")) return ["partenza"];
+  if (statoTxt.includes("arrivo")) return ["arrivo"];
+  if (statoTxt.includes("soggiorno")) return ["soggiorno"];
   return [];
 }
 
