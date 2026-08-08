@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 import { DB, supabase, newId } from "./db.js";
 import { resolveCamera, ZONE_NAMES, ROOM_NUMBERS, PIANI } from "./zoneData.js";
 import NotificheSettings, { playNotifSound } from "./NotificheSettings";
+import Camere from "./Camere.jsx";
+import { Sheet, Field, ctaSt, inputSt } from "./ui.jsx";
 import {
   playUrgentSiren,
   canInviaUrgenza,
@@ -795,47 +797,6 @@ function exportCSV(items) {
   URL.revokeObjectURL(u);
 }
 
-const inputSt = {
-  width: "100%",
-  background: "#fff",
-  border: "1px solid #E4E0D6",
-  borderRadius: 11,
-  padding: "12px 13px",
-  fontSize: 15,
-  color: "#1B2420",
-  outline: "none",
-  fontFamily: "inherit",
-};
-const ctaSt = {
-  width: "100%",
-  background: "#0E5C49",
-  color: "#fff",
-  fontWeight: 700,
-  fontSize: 15,
-  padding: 14,
-  borderRadius: 12,
-  border: "none",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: 8,
-};
-const Field = ({ label, children }) => (
-  <div style={{ marginBottom: 16 }}>
-    <label
-      style={{
-        display: "block",
-        fontSize: 13,
-        fontWeight: 600,
-        marginBottom: 7,
-      }}
-    >
-      {label}
-    </label>
-    {children}
-  </div>
-);
 const ROOM_NUMBER_LIST = [...ROOM_NUMBERS].sort((a, b) => +a - +b);
 // ── CameraZonaField: selettore Camera/Zona (sostituisce datalist nativo, che su iOS apre menu a schermo intero) ──
 function CameraZonaField({
@@ -1009,67 +970,6 @@ function FullPage({ onClose, title, children }) {
         }}
       >
         <div style={{ maxWidth: 760, margin: "0 auto" }}>{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function Sheet({ onClose, title, children }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 50,
-        background: "rgba(20,26,23,.55)",
-        display: "flex",
-        alignItems: "flex-end",
-        justifyContent: "center",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "#F4F2ED",
-          width: "100%",
-          maxWidth: 760,
-          maxHeight: "93vh",
-          overflow: "auto",
-          borderRadius: "20px 20px 0 0",
-        }}
-      >
-        <div
-          style={{
-            position: "sticky",
-            top: 0,
-            background: "#F4F2ED",
-            padding: "16px 16px 6px",
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            zIndex: 2,
-          }}
-        >
-          <button
-            onClick={onClose}
-            style={{
-              background: "#fff",
-              border: "1px solid #E4E0D6",
-              color: "#1B2420",
-              width: 34,
-              height: 34,
-              borderRadius: 9,
-              display: "grid",
-              placeItems: "center",
-              cursor: "pointer",
-            }}
-          >
-            {I.back}
-          </button>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{title}</h2>
-        </div>
-        <div style={{ padding: "4px 16px 28px" }}>{children}</div>
       </div>
     </div>
   );
@@ -1857,7 +1757,6 @@ export default function App() {
   const [planningOpen, setPlanningOpen] = useState(false);
   const [planningLavoriOpen, setPlanningLavoriOpen] = useState(false);
   const [urgenze, setUrgenze] = useState([]);
-  const [camerePulite, setCamerePulite] = useState([]); // [{camera, fatta_da, fatta_il}]
   // Badge rosso con contatore sull'icona dell'app (come nelle app native),
   // non solo nella notifica push: Badging API, supportata da iOS 16.4+ e
   // Chrome/Android per PWA installate. Se il browser non la supporta non
@@ -1945,18 +1844,6 @@ export default function App() {
       window.removeEventListener("online", tryFlush);
     };
   }, [refresh]);
-  const refreshCamerePulite = useCallback(async () => {
-    setCamerePulite(await DB.loadCamerePulite());
-  }, []);
-  const toggleCameraPulita = async (camera) => {
-    const gia = camerePulite.some((c) => c.camera === camera);
-    if (gia) {
-      await DB.rimuoviCameraPulita(camera);
-    } else {
-      await DB.segnaCameraPulita(camera, user.name);
-    }
-    await refreshCamerePulite();
-  };
   const sendUrgenza = async (nota) => {
     await DB.addUrgenza(nota, user.name);
     await refreshUrgenze();
@@ -2098,7 +1985,7 @@ export default function App() {
     let mounted = true;
     (async () => {
       setLoading(true);
-      await Promise.all([refresh(), refreshUrgenze(), refreshCamerePulite()]);
+      await Promise.all([refresh(), refreshUrgenze()]);
       if (mounted) setLoading(false);
     })();
     // Realtime: aggiorna quando altri dispositivi cambiano i dati
@@ -2133,17 +2020,12 @@ export default function App() {
           refreshUrgenze();
         },
       )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "camere_pulite_oggi" },
-        () => refreshCamerePulite(),
-      )
       .subscribe();
     return () => {
       mounted = false;
       supabase.removeChannel(ch);
     };
-  }, [user, refresh, refreshUrgenze, refreshCamerePulite]);
+  }, [user, refresh, refreshUrgenze]);
 
   useEffect(() => {
     const on = () => setIsOffline(false),
@@ -2312,10 +2194,12 @@ export default function App() {
   // Planning Lavori: reception/direzione/direttore congressi lo vedono,
   // i manutentori pure (per segnare i lavori fatti)
   const vedePlanningLavori = isGestione || user.role === "manutentore";
-  // camere pulite oggi: governante (spuntano), reception/direzione (controllano)
+  // tabellone housekeeping: governante/reception (segnano il lavoro),
+  // portiere_notturno (carica il file), direzione/sviluppatore (controllano)
   const vedePulizie =
     user.role === "governante" ||
     user.role === "reception" ||
+    user.role === "portiere_notturno" ||
     user.role === "direzione" ||
     user.role === "sviluppatore";
 
@@ -2611,9 +2495,7 @@ export default function App() {
             ...(vedeInterventi
               ? [["interventi", "Interventi", cntPlan.pending]]
               : []),
-            ...(vedePulizie
-              ? [["camere", "Camere", camerePulite.length]]
-              : []),
+            ...(vedePulizie ? [["camere", "Camere"]] : []),
           ].map(([k, l, n]) => (
             <button
               key={k}
@@ -3270,68 +3152,7 @@ export default function App() {
       )}
       {/* ===== TAB: CAMERE (pulizie del giorno) ===== */}
       {tab === "camere" && vedePulizie && (
-        <main
-          style={{ maxWidth: 760, margin: "0 auto", padding: "14px 14px 90px" }}
-        >
-          <div
-            style={{
-              fontSize: 12.5,
-              color: "#5C645E",
-              marginBottom: 14,
-              lineHeight: 1.4,
-            }}
-          >
-            Tocca una camera per segnarla fatta (diventa verde). Si azzera da
-            sola ogni notte alle 23:59 — {camerePulite.length} fatte oggi su{" "}
-            {ROOM_NUMBER_LIST.length}.
-          </div>
-          {PIANI.map((pi) => {
-            const fatteQuiPiano = pi.rooms.filter((r) =>
-              camerePulite.some((c) => c.camera === r),
-            ).length;
-            return (
-              <div key={pi.id} style={{ marginBottom: 18 }}>
-                <div
-                  style={{
-                    fontSize: 11.5,
-                    fontWeight: 700,
-                    color: "#0A4A40",
-                    textTransform: "uppercase",
-                    letterSpacing: 0.4,
-                    marginBottom: 7,
-                  }}
-                >
-                  {pi.label} · {fatteQuiPiano}/{pi.rooms.length}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {pi.rooms.map((r) => {
-                    const rec = camerePulite.find((c) => c.camera === r);
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => toggleCameraPulita(r)}
-                        title={rec ? `Fatta da ${rec.fatta_da}` : "Tocca per segnare fatta"}
-                        style={{
-                          minWidth: 54,
-                          padding: "9px 6px",
-                          borderRadius: 10,
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          border: "1.5px solid " + (rec ? "#16A34A" : "#E4E0D6"),
-                          background: rec ? "#16A34A" : "#fff",
-                          color: rec ? "#fff" : "#5C645E",
-                        }}
-                      >
-                        {r}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </main>
+        <Camere user={user} onFlash={flash} />
       )}
       {/* ===== TAB: INTERVENTI PIANIFICATI ===== */}
       {tab === "interventi" && (

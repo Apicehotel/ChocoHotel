@@ -630,33 +630,67 @@ export const DB = {
     return data;
   },
 
-  // ── Camere pulite oggi (Governante segna, Reception/Direzione controllano) ──
-  // La presenza di una riga = camera fatta. Si svuota da sola ogni notte
-  // alle 23:59 (pg_cron), niente reset manuale da fare.
-  async loadCamerePulite() {
-    const { data, error } = await supabase
-      .from("camere_pulite_oggi")
-      .select("camera, fatta_da, fatta_il");
+  // ── Tabellone camere (housekeeping) ──────────────────────────────────────
+  // camere_giorno: il tabellone del giorno, riscritto per intero dalla RPC
+  // ad ogni caricamento file. camere_lavoro: stato lavoro delle governanti,
+  // separato cosi' segnare "fatta" non tocca mai i dati Slope.
+  async loadCamereGiorno() {
+    const { data, error } = await supabase.from("camere_giorno").select("*");
     if (error) {
       console.error(error);
       return [];
     }
     return data;
   },
-  async segnaCameraPulita(camera, nome) {
+  async loadCamereLavoro() {
+    const { data, error } = await supabase.from("camere_lavoro").select("*");
+    if (error) {
+      console.error(error);
+      return [];
+    }
+    return data;
+  },
+  async segnaLavoroCamera(camera, stato, nome) {
     const { error } = await supabase
-      .from("camere_pulite_oggi")
-      .upsert({ camera, fatta_da: nome, fatta_il: new Date().toISOString() });
+      .from("camere_lavoro")
+      .upsert({
+        camera,
+        stato,
+        da_chi: nome,
+        aggiornato_il: new Date().toISOString(),
+      });
     if (error) console.error(error);
     return !error;
   },
-  async rimuoviCameraPulita(camera) {
+  // Modifica manuale di una camera (reception/governante): cambia stato_slope,
+  // letti o note. Marca sempre manuale=true con chi e quando, cosi' resta
+  // tracciabile rispetto ai dati originali del file Slope.
+  async aggiornaCameraGiorno(camera, campi, nome) {
     const { error } = await supabase
-      .from("camere_pulite_oggi")
-      .delete()
+      .from("camere_giorno")
+      .update({
+        ...campi,
+        manuale: true,
+        manuale_da: nome,
+        manuale_il: new Date().toISOString(),
+        aggiornato_il: new Date().toISOString(),
+      })
       .eq("camera", camera);
     if (error) console.error(error);
     return !error;
+  },
+  // Carica il file Slope del giorno (gia' anonimizzato nel browser): riscrive
+  // camere_giorno e fa ripartire camere_lavoro lato server.
+  async caricaCamereGiorno(nome, camere) {
+    const { data, error } = await supabase.rpc("carica_camere_giorno", {
+      p_caricato_da: nome,
+      p_camere: camere,
+    });
+    if (error) {
+      console.error(error);
+      return { ok: false, error: error.message || String(error) };
+    }
+    return { ok: true, id: data };
   },
 };
 

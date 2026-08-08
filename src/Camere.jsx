@@ -1,0 +1,733 @@
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import * as XLSX from "xlsx";
+import { DB, supabase } from "./db.js";
+import { PIANI as PIANI_ZONE, ROOM_NUMBERS } from "./zoneData.js";
+import { Sheet, Field, ctaSt, inputSt } from "./ui.jsx";
+
+// ── Ruoli che possono caricare il file Slope del giorno ─────────────────────
+const RUOLI_CARICAMENTO = ["reception", "portiere_notturno", "sviluppatore"];
+// Ruoli che vedono la sezione "Modifica" dentro il foglio di una camera
+const RUOLI_MODIFICA = ["reception", "governante"];
+
+const STRUTTURE = ["Wine", "Jazz"];
+const PIANI_NUM = [1, 2, 3, 4];
+
+const SLOPE_LABELS = {
+  b2b: "PART. + ARR.",
+  partenza: "PARTENZA",
+  arrivo: "ARRIVO",
+  fermata: "FERMATA",
+  libera: "LIBERA",
+};
+const SLOPE_COLORS = {
+  b2b: { bg: "#FDEAEA", fg: "#B23A2E" },
+  partenza: { bg: "#FBF0DF", fg: "#A87F34" },
+  arrivo: { bg: "#EAF2FF", fg: "#2563EB" },
+  fermata: { bg: "#F5F3FF", fg: "#6D28D9" },
+  libera: { bg: "#E6F2EB", fg: "#2E7D5B" },
+};
+const LAVORO_LABELS = {
+  dafare: "Da fare",
+  corso: "In corso",
+  fatto: "Fatta",
+  nondist: "Non disturbare",
+};
+const LAVORO_COLORS = {
+  dafare: "#9CA3AF",
+  corso: "#B9842F",
+  fatto: "#16A34A",
+  nondist: "#4C6FA5",
+};
+const LETTI_CHIPS = ["Matrimoniale", "Singolo", "Culla", "Letto aggiunto"];
+
+// ── Lookup camera → struttura/piano ufficiale, dal file zoneData.js ─────────
+// Usato sia per completare il tabellone con le camere non presenti nel file
+// caricato (restano "libera"), sia come riferimento in fase di parsing.
+const CAMERA_STRUTTURA_PIANO = {};
+PIANI_ZONE.forEach((p) => {
+  const struttura = p.id.startsWith("jazz") ? "Jazz" : "Wine";
+  const piano = Number(p.id.slice(-1));
+  p.rooms.forEach((r) => {
+    CAMERA_STRUTTURA_PIANO[r] = { struttura, piano };
+  });
+});
+
+// ── Parsing file Slope (housekeeping .xls/.xlsx) ─────────────────────────────
+// Colonne (0-based): 0=Piano/interno, 1=Tipologia, 2=Alloggio(camera),
+// 3=Stato soggiorno, 4=Arrivo, 5=Partenza, 6=Config letti alloggio,
+// 7=Config letti prenotazione, 8=Note.
+
+const ORDINALI = { primo: 1, secondo: 2, terzo: 3, quarto: 4 };
+
+function pianoInterno(raw) {
+  const norm = String(raw || "").toLowerCase();
+  let struttura = null;
+  if (norm.includes("jazz")) struttura = "Jazz";
+  else if (norm.includes("wine")) struttura = "Wine";
+  let piano = null;
+  for (const [k, v] of Object.entries(ORDINALI)) {
+    if (norm.includes(k)) {
+      piano = v;
+      break;
+    }
+  }
+  return { struttura, piano };
+}
+
+// Riduce una data (stringa o oggetto Date, a seconda di come SheetJS la
+// restituisce) al solo "gg/mm" richiesto dallo schema camere_giorno.
+function soloData(v) {
+  if (v == null || v === "") return "";
+  if (v instanceof Date && !isNaN(v)) {
+    const dd = String(v.getDate()).padStart(2, "0");
+    const mm = String(v.getMonth() + 1).padStart(2, "0");
+    return `${dd}/${mm}`;
+  }
+  const s = String(v).trim();
+  const m = s.match(/(\d{1,2})[\/\-.](\d{1,2})/);
+  if (m) return `${m[1].padStart(2, "0")}/${m[2].padStart(2, "0")}`;
+  return s;
+}
+
+// Classifica una singola riga del file in base alle colonne Arrivo/Partenza
+// (le piu' affidabili), usando "Stato soggiorno" solo per distinguere una
+// camera occupata senza movimenti (fermata) da una riga vuota.
+function classificaRiga(row) {
+  const arr = String(row[4] ?? "").trim();
+  const part = String(row[5] ?? "").trim();
+  if (part && arr) return ["partenza", "arrivo"]; // stesso giorno, sulla stessa riga
+  if (part) return ["partenza"];
+  if (arr) return ["arrivo"];
+  const statoTxt = String(row[3] ?? "").trim();
+  if (statoTxt) return ["soggiorno"];
+  return [];
+}
+
+// Trasforma le righe grezze del foglio Excel nell'elenco camere anonimizzato
+// da passare alla RPC carica_camere_giorno. Ritorna anche qualche statistica
+// per il messaggio di conferma dopo il caricamento.
+export function elaboraRighe(rows) {
+  const perCamera = {};
+  for (const row of rows) {
+    if (!row || row.length === 0) continue;
+    if (row.some((c) => String(c ?? "").toLowerCase().includes("alloggio")))
+      continue; // riga di intestazione
+    const camera = String(row[2] ?? "").trim();
+    if (!camera || !ROOM_NUMBERS.has(camera)) continue; // scarta righe non-camera
+
+    const { struttura: strFile, piano: pianoFile } = pianoInterno(row[0]);
+    const fallback = CAMERA_STRUTTURA_PIANO[camera] || {};
+    const struttura = strFile || fallback.struttura || "Wine";
+    const piano = pianoFile || fallback.piano || 1;
+    const tipologia = String(row[1] ?? "").trim();
+    const letti = String(row[7] ?? row[6] ?? "").trim();
+    const note = String(row[8] ?? "").trim();
+    const arrivo = soloData(row[4]);
+    const partenza = soloData(row[5]);
+    const tipi = classificaRiga(row);
+
+    if (!perCamera[camera]) {
+      perCamera[camera] = {
+        camera,
+        struttura,
+        piano,
+        tipologia,
+        letti,
+        note,
+        arrivo: "",
+        partenza: "",
+        tipi: [],
+      };
+    }
+    const c = perCamera[camera];
+    if (tipologia) c.tipologia = tipologia;
+    if (letti) c.letti = letti;
+    if (note) c.note = note;
+    if (arrivo) c.arrivo = arrivo;
+    if (partenza) c.partenza = partenza;
+    c.tipi.push(...tipi);
+  }
+
+  let nB2b = 0;
+  const camereFile = Object.values(perCamera).map((c) => {
+    const haArrivo = c.tipi.includes("arrivo");
+    const haPartenza = c.tipi.includes("partenza");
+    const haSoggiorno = c.tipi.includes("soggiorno");
+    let stato_slope;
+    if (haArrivo && haPartenza) {
+      stato_slope = "b2b";
+      nB2b++;
+    } else if (haPartenza) stato_slope = "partenza";
+    else if (haArrivo) stato_slope = "arrivo";
+    else if (haSoggiorno) stato_slope = "fermata";
+    else stato_slope = "libera";
+    const { tipi, ...resto } = c;
+    return { ...resto, stato_slope };
+  });
+
+  // Completa con le camere ufficiali assenti dal file: restano "libera".
+  const trovate = new Set(camereFile.map((c) => c.camera));
+  const mancanti = Object.entries(CAMERA_STRUTTURA_PIANO)
+    .filter(([num]) => !trovate.has(num))
+    .map(([camera, { struttura, piano }]) => ({
+      camera,
+      struttura,
+      piano,
+      tipologia: "",
+      stato_slope: "libera",
+      letti: "",
+      note: "",
+      arrivo: "",
+      partenza: "",
+    }));
+
+  return { camere: [...camereFile, ...mancanti], nCamere: camereFile.length, nB2b };
+}
+
+async function leggiWorkbook(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", cellDates: true });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+}
+
+// ── Componente principale ────────────────────────────────────────────────
+export default function Camere({ user, onFlash }) {
+  const [giorno, setGiorno] = useState([]); // camere_giorno
+  const [lavoro, setLavoro] = useState([]); // camere_lavoro
+  const [loading, setLoading] = useState(true);
+  const [struttura, setStruttura] = useState("Wine");
+  const [piano, setPiano] = useState(1);
+  const [aperta, setAperta] = useState(null); // camera selezionata (numero)
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef(null);
+
+  const refresh = useCallback(async () => {
+    const [g, l] = await Promise.all([
+      DB.loadCamereGiorno(),
+      DB.loadCamereLavoro(),
+    ]);
+    setGiorno(g);
+    setLavoro(l);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const ch = supabase
+      .channel("camere-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "camere_giorno" },
+        () => refresh(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "camere_lavoro" },
+        () => refresh(),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [refresh]);
+
+  const lavoroByCamera = useMemo(() => {
+    const m = {};
+    lavoro.forEach((l) => (m[l.camera] = l));
+    return m;
+  }, [lavoro]);
+
+  const camere = useMemo(
+    () =>
+      giorno
+        .filter((c) => c.struttura === struttura && c.piano === piano)
+        .map((c) => ({ ...c, lavoro: lavoroByCamera[c.camera]?.stato || "dafare" })),
+    [giorno, struttura, piano, lavoroByCamera],
+  );
+
+  const sorted = useMemo(() => {
+    const peso = (c) =>
+      c.stato_slope === "b2b" ? 0 : c.lavoro === "fatto" ? 3 : c.stato_slope === "libera" ? 2 : 1;
+    return [...camere].sort(
+      (a, b) => peso(a) - peso(b) || a.camera.localeCompare(b.camera, undefined, { numeric: true }),
+    );
+  }, [camere]);
+
+  const contaDaFarePerPiano = useCallback(
+    (p) =>
+      giorno.filter(
+        (c) =>
+          c.struttura === struttura &&
+          c.piano === p &&
+          c.stato_slope !== "libera" &&
+          (lavoroByCamera[c.camera]?.stato || "dafare") !== "fatto",
+      ).length,
+    [giorno, struttura, lavoroByCamera],
+  );
+
+  const cameraAperta = aperta ? giorno.find((c) => c.camera === aperta) : null;
+
+  const puoCaricare = RUOLI_CARICAMENTO.includes(user.role);
+  const puoModificare = RUOLI_MODIFICA.includes(user.role);
+
+  const segnaLavoro = async (camera, stato) => {
+    await DB.segnaLavoroCamera(camera, stato, user.name);
+    onFlash?.(`Camera ${camera} · ${LAVORO_LABELS[stato].toLowerCase()}`);
+    refresh();
+  };
+
+  const salvaModifica = async (camera, campi) => {
+    await DB.aggiornaCameraGiorno(camera, campi, user.name);
+    onFlash?.(`Camera ${camera} aggiornata`);
+    refresh();
+  };
+
+  const caricaFile = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    try {
+      const rows = await leggiWorkbook(file);
+      const { camere: elenco, nCamere, nB2b } = elaboraRighe(rows);
+      const res = await DB.caricaCamereGiorno(user.name, elenco);
+      if (res.ok) {
+        onFlash?.(`Caricate ${nCamere} camere dal file, ${nB2b} back-to-back ✓`);
+        refresh();
+      } else {
+        onFlash?.(`Errore caricamento: ${res.error}`, false);
+      }
+    } catch (err) {
+      console.error(err);
+      onFlash?.("File non leggibile: controlla che sia l'export housekeeping di Slope", false);
+    }
+    setUploading(false);
+  };
+
+  return (
+    <main style={{ maxWidth: 760, margin: "0 auto", padding: "14px 14px 90px" }}>
+      {puoCaricare && (
+        <div style={{ marginBottom: 14 }}>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xls,.xlsx"
+            hidden
+            onChange={caricaFile}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+            style={{ ...ctaSt, opacity: uploading ? 0.6 : 1 }}
+          >
+            {uploading ? "Caricamento…" : "Carica file di oggi"}
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        {STRUTTURE.map((s) => (
+          <button
+            key={s}
+            onClick={() => setStruttura(s)}
+            style={{
+              flex: 1,
+              padding: "12px 8px",
+              borderRadius: 12,
+              fontSize: 15,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid " + (struttura === s ? "#0E5C49" : "#E4E0D6"),
+              background: struttura === s ? "#0E5C49" : "#fff",
+              color: struttura === s ? "#fff" : "#5C645E",
+            }}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+        {PIANI_NUM.map((p) => {
+          const n = contaDaFarePerPiano(p);
+          return (
+            <button
+              key={p}
+              onClick={() => setPiano(p)}
+              style={{
+                flex: 1,
+                padding: "9px 4px",
+                borderRadius: 10,
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                border: "1.5px solid " + (piano === p ? "#0E5C49" : "#E4E0D6"),
+                background: piano === p ? "#0E5C49" : "#fff",
+                color: piano === p ? "#fff" : "#5C645E",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+              }}
+            >
+              {p}°
+              {n > 0 && (
+                <span
+                  style={{
+                    background: piano === p ? "rgba(255,255,255,.25)" : "#FDEAEA",
+                    color: piano === p ? "#fff" : "#B23A2E",
+                    borderRadius: 999,
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    padding: "1px 6px",
+                  }}
+                >
+                  {n}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: "center", padding: 30, color: "#5C645E" }}>
+          Caricamento…
+        </div>
+      ) : sorted.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 30, color: "#5C645E", fontSize: 13.5 }}>
+          Nessuna camera su questo piano. Se il tabellone è vuoto, carica il
+          file di oggi.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill, minmax(104px, 1fr))",
+            gap: 8,
+          }}
+        >
+          {sorted.map((c) => (
+            <CameraCard key={c.camera} c={c} onClick={() => setAperta(c.camera)} />
+          ))}
+        </div>
+      )}
+
+      {cameraAperta && (
+        <CameraSheet
+          c={{ ...cameraAperta, lavoro: lavoroByCamera[cameraAperta.camera]?.stato || "dafare" }}
+          puoModificare={puoModificare}
+          onClose={() => setAperta(null)}
+          onSegnaLavoro={segnaLavoro}
+          onSalvaModifica={salvaModifica}
+        />
+      )}
+    </main>
+  );
+}
+
+function CameraCard({ c, onClick }) {
+  const slope = SLOPE_COLORS[c.stato_slope] || SLOPE_COLORS.libera;
+  const fatta = c.lavoro === "fatto";
+  const nondist = c.lavoro === "nondist";
+  const bordoSx = c.stato_slope === "b2b" ? "#B23A2E" : LAVORO_COLORS[c.lavoro];
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        position: "relative",
+        textAlign: "left",
+        padding: "10px 10px 10px 12px",
+        borderRadius: 13,
+        cursor: "pointer",
+        border: "1.5px solid " + (fatta ? "#16A34A" : c.stato_slope === "b2b" ? "#B23A2E" : "#E4E0D6"),
+        background: fatta ? "#E6F2EB" : nondist ? "#EEF1FB" : "#fff",
+        boxShadow: "inset 4px 0 0 " + bordoSx,
+        overflow: "hidden",
+      }}
+    >
+      {c.stato_slope === "b2b" && !fatta && (
+        <span
+          style={{
+            position: "absolute",
+            top: 7,
+            right: 7,
+            fontSize: 8.5,
+            fontWeight: 800,
+            color: "#B23A2E",
+            background: "#FDEAEA",
+            padding: "2px 6px",
+            borderRadius: 6,
+            letterSpacing: 0.3,
+          }}
+        >
+          SUBITO
+        </span>
+      )}
+      {fatta && (
+        <span
+          style={{
+            position: "absolute",
+            top: 7,
+            right: 7,
+            width: 18,
+            height: 18,
+            borderRadius: "50%",
+            background: "#16A34A",
+            color: "#fff",
+            display: "grid",
+            placeItems: "center",
+            fontSize: 11,
+            fontWeight: 800,
+          }}
+        >
+          ✓
+        </span>
+      )}
+      <div style={{ fontSize: 16.5, fontWeight: 800, color: "#1B2420" }}>{c.camera}</div>
+      {c.tipologia && (
+        <div
+          style={{
+            fontSize: 10.5,
+            color: "#5C645E",
+            marginTop: 1,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+          }}
+        >
+          {c.tipologia}
+        </div>
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 8 }}>
+        <span
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            padding: "2px 6px",
+            borderRadius: 5,
+            background: slope.bg,
+            color: slope.fg,
+            whiteSpace: "nowrap",
+          }}
+        >
+          {SLOPE_LABELS[c.stato_slope]}
+        </span>
+        {(c.letti || c.note) && (
+          <span
+            title={c.note ? "Ha letti/note" : "Ha letti"}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: "#B9842F",
+              flexShrink: 0,
+            }}
+          />
+        )}
+      </div>
+    </button>
+  );
+}
+
+function CameraSheet({ c, puoModificare, onClose, onSegnaLavoro, onSalvaModifica }) {
+  const [modificaOpen, setModificaOpen] = useState(false);
+  const [statoSlope, setStatoSlope] = useState(c.stato_slope);
+  const [letti, setLetti] = useState(c.letti || "");
+  const [note, setNote] = useState(c.note || "");
+  const [busy, setBusy] = useState(false);
+  const slope = SLOPE_COLORS[c.stato_slope] || SLOPE_COLORS.libera;
+
+  const salva = async () => {
+    setBusy(true);
+    await onSalvaModifica(c.camera, { stato_slope: statoSlope, letti: letti.trim(), note: note.trim() });
+    setBusy(false);
+    setModificaOpen(false);
+  };
+
+  return (
+    <Sheet onClose={onClose} title={`Camera ${c.camera}`}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 16 }}>
+        {c.tipologia && (
+          <span style={{ fontSize: 13.5, color: "#5C645E" }}>{c.tipologia}</span>
+        )}
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            padding: "3px 9px",
+            borderRadius: 7,
+            background: slope.bg,
+            color: slope.fg,
+          }}
+        >
+          {SLOPE_LABELS[c.stato_slope]}
+        </span>
+      </div>
+
+      {(c.arrivo || c.partenza || c.letti || c.note) && (
+        <div
+          style={{
+            background: "#fff",
+            border: "1px solid #E4E0D6",
+            borderRadius: 12,
+            padding: 12,
+            marginBottom: 16,
+            fontSize: 13,
+          }}
+        >
+          {(c.arrivo || c.partenza) && (
+            <div style={{ display: "flex", gap: 16, marginBottom: c.letti || c.note ? 8 : 0 }}>
+              {c.arrivo && (
+                <div>
+                  <div style={{ color: "#5C645E", fontSize: 11 }}>Arrivo</div>
+                  <div style={{ fontWeight: 700 }}>{c.arrivo}</div>
+                </div>
+              )}
+              {c.partenza && (
+                <div>
+                  <div style={{ color: "#5C645E", fontSize: 11 }}>Partenza</div>
+                  <div style={{ fontWeight: 700 }}>{c.partenza}</div>
+                </div>
+              )}
+            </div>
+          )}
+          {c.letti && (
+            <div style={{ marginBottom: c.note ? 6 : 0 }}>
+              <span style={{ color: "#5C645E" }}>Letti: </span>
+              {c.letti}
+            </div>
+          )}
+          {c.note && (
+            <div>
+              <span style={{ color: "#5C645E" }}>Note: </span>
+              {c.note}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Segna il lavoro</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+        {["dafare", "corso", "fatto"].map((s) => (
+          <button
+            key={s}
+            onClick={() => onSegnaLavoro(c.camera, s)}
+            style={{
+              padding: "12px 6px",
+              borderRadius: 11,
+              fontSize: 13,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid " + (c.lavoro === s ? LAVORO_COLORS[s] : "#E4E0D6"),
+              background: c.lavoro === s ? LAVORO_COLORS[s] + "22" : "#fff",
+              color: c.lavoro === s ? LAVORO_COLORS[s] : "#5C645E",
+            }}
+          >
+            {LAVORO_LABELS[s]}
+          </button>
+        ))}
+      </div>
+      {c.stato_slope === "fermata" && (
+        <button
+          onClick={() => onSegnaLavoro(c.camera, "nondist")}
+          style={{
+            width: "100%",
+            padding: "12px 6px",
+            borderRadius: 11,
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: "pointer",
+            border: "1.5px solid " + (c.lavoro === "nondist" ? LAVORO_COLORS.nondist : "#E4E0D6"),
+            background: c.lavoro === "nondist" ? LAVORO_COLORS.nondist + "22" : "#fff",
+            color: c.lavoro === "nondist" ? LAVORO_COLORS.nondist : "#5C645E",
+            marginBottom: 8,
+          }}
+        >
+          {LAVORO_LABELS.nondist}
+        </button>
+      )}
+
+      {puoModificare && (
+        <div style={{ marginTop: 16, borderTop: "1px solid #E4E0D6", paddingTop: 16 }}>
+          {!modificaOpen ? (
+            <button
+              onClick={() => setModificaOpen(true)}
+              style={{
+                width: "100%",
+                background: "none",
+                border: "1.5px solid #E4E0D6",
+                color: "#1B2420",
+                fontWeight: 700,
+                fontSize: 13,
+                padding: 12,
+                borderRadius: 11,
+                cursor: "pointer",
+              }}
+            >
+              Modifica camera
+            </button>
+          ) : (
+            <>
+              <Field label="Stato">
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {Object.keys(SLOPE_LABELS).map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => setStatoSlope(k)}
+                      style={{
+                        padding: "7px 11px",
+                        borderRadius: 9,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        border: "1.5px solid " + (statoSlope === k ? SLOPE_COLORS[k].fg : "#E4E0D6"),
+                        background: statoSlope === k ? SLOPE_COLORS[k].bg : "#fff",
+                        color: statoSlope === k ? SLOPE_COLORS[k].fg : "#5C645E",
+                      }}
+                    >
+                      {SLOPE_LABELS[k]}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Letti">
+                <input style={inputSt} value={letti} onChange={(e) => setLetti(e.target.value)} />
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                  {LETTI_CHIPS.map((chip) => (
+                    <button
+                      key={chip}
+                      onClick={() =>
+                        setLetti((prev) => (prev ? `${prev}, ${chip}` : chip))
+                      }
+                      style={{
+                        padding: "6px 10px",
+                        borderRadius: 999,
+                        fontSize: 11.5,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        border: "1px solid #E4E0D6",
+                        background: "#fff",
+                        color: "#5C645E",
+                      }}
+                    >
+                      + {chip}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+              <Field label="Note">
+                <textarea
+                  style={{ ...inputSt, minHeight: 70, resize: "vertical" }}
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </Field>
+              <button disabled={busy} onClick={salva} style={{ ...ctaSt, opacity: busy ? 0.6 : 1 }}>
+                {busy ? "Salvataggio…" : "Salva modifiche"}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </Sheet>
+  );
+}
