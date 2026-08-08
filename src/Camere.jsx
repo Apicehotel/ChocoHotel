@@ -380,6 +380,18 @@ export default function Camere({ user, onFlash }) {
     [giorno, struttura, lavoroByCamera],
   );
 
+  const contaB2bPerPiano = useCallback(
+    (p) =>
+      giorno.filter(
+        (c) =>
+          c.struttura === struttura &&
+          c.piano === p &&
+          c.stato_slope === "b2b" &&
+          (lavoroByCamera[c.camera]?.stato || "dafare") !== "fatto",
+      ).length,
+    [giorno, struttura, lavoroByCamera],
+  );
+
   const cameraAperta = aperta ? giorno.find((c) => c.camera === aperta) : null;
 
   const puoCaricare = RUOLI_CARICAMENTO.includes(user.role);
@@ -474,79 +486,98 @@ export default function Camere({ user, onFlash }) {
         </div>
       )}
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
         {STRUTTURE.map((s) => (
           <button
             key={s}
             onClick={() => setStruttura(s)}
             style={{
               flex: 1,
-              padding: "12px 8px",
-              borderRadius: 12,
-              fontSize: 15,
-              fontWeight: 700,
+              padding: 14,
+              borderRadius: 14,
+              fontSize: 17,
+              fontWeight: 800,
+              letterSpacing: "-0.01em",
               cursor: "pointer",
               border: "1.5px solid " + (struttura === s ? "#0E5C49" : "#E4E0D6"),
               background: struttura === s ? "#0E5C49" : "#fff",
-              color: struttura === s ? "#fff" : "#5C645E",
+              color: struttura === s ? "#fff" : "#1B2420",
             }}
           >
             {s}
           </button>
         ))}
       </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
         {PIANI_NUM.map((p) => {
           const n = contaDaFarePerPiano(p);
+          const b = contaB2bPerPiano(p);
+          const on = piano === p;
           return (
             <button
               key={p}
               onClick={() => setPiano(p)}
               style={{
                 flex: 1,
-                padding: "9px 4px",
-                borderRadius: 10,
-                fontSize: 13,
-                fontWeight: 700,
+                position: "relative",
+                padding: "11px 6px",
+                borderRadius: 13,
+                textAlign: "center",
                 cursor: "pointer",
-                border: "1.5px solid " + (piano === p ? "#0E5C49" : "#E4E0D6"),
-                background: piano === p ? "#0E5C49" : "#fff",
-                color: piano === p ? "#fff" : "#5C645E",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
+                border: "1.5px solid " + (on ? "#0E5C49" : "#E4E0D6"),
+                background: on ? "#EAF1EE" : "#fff",
               }}
             >
-              {p}°
-              {n > 0 && (
+              {b > 0 && (
                 <span
                   style={{
-                    background: piano === p ? "rgba(255,255,255,.25)" : "#FDEAEA",
-                    color: piano === p ? "#fff" : "#B23A2E",
-                    borderRadius: 999,
-                    fontSize: 10.5,
-                    fontWeight: 700,
-                    padding: "1px 6px",
+                    position: "absolute",
+                    top: -6,
+                    right: -4,
+                    background: "#B23A2E",
+                    color: "#fff",
+                    fontSize: 10,
+                    fontWeight: 800,
+                    minWidth: 19,
+                    height: 19,
+                    borderRadius: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    padding: "0 5px",
+                    border: "2px solid #F4F2ED",
                   }}
                 >
-                  {n}
+                  {b}
                 </span>
               )}
+              <div
+                style={{
+                  fontSize: 16,
+                  fontWeight: 800,
+                  color: on ? "#0E5C49" : "#1B2420",
+                }}
+              >
+                {p}°
+              </div>
+              <div style={{ fontSize: 10, color: "#9CA39C", marginTop: 2, fontWeight: 600 }}>
+                {n > 0 ? `${n} da fare` : "ok"}
+              </div>
             </button>
           );
         })}
       </div>
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         {Object.entries(ORDINE_LABELS).map(([val, label]) => (
           <button
             key={val}
             onClick={() => setOrdine(val)}
             style={{
-              padding: "6px 12px",
-              borderRadius: 999,
-              fontSize: 12,
+              flex: 1,
+              padding: 11,
+              borderRadius: 12,
+              fontSize: 13.5,
               fontWeight: 700,
               cursor: "pointer",
               border: "1.5px solid " + (ordine === val ? "#0E5C49" : "#E4E0D6"),
