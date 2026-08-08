@@ -3,6 +3,14 @@ import * as XLSX from "xlsx";
 import { DB, supabase } from "./db.js";
 import { PIANI as PIANI_ZONE, ROOM_NUMBERS } from "./zoneData.js";
 import { Sheet, Field, ctaSt, inputSt } from "./ui.jsx";
+import {
+  cacheSnapshot,
+  getCachedSnapshot,
+  contaInAttesa,
+  enqueueLavoro,
+  enqueueModifica,
+  avviaSyncAutomatico,
+} from "./camereOffline.js";
 
 // ── Ruoli che possono caricare il file Slope del giorno ─────────────────────
 const RUOLI_CARICAMENTO = ["reception", "portiere_notturno", "sviluppatore"];
@@ -39,6 +47,7 @@ const LAVORO_COLORS = {
   nondist: "#4C6FA5",
 };
 const LETTI_CHIPS = ["Matrimoniale", "Singolo", "Culla", "Letto aggiunto"];
+const ORDINE_LABELS = { urgenti: "Urgenti prima", numero: "Per numero" };
 
 // ── Lookup camera → struttura/piano ufficiale, dal file zoneData.js ─────────
 // Usato sia per completare il tabellone con le camere non presenti nel file
@@ -198,18 +207,33 @@ export default function Camere({ user, onFlash }) {
   const [loading, setLoading] = useState(true);
   const [struttura, setStruttura] = useState("Wine");
   const [piano, setPiano] = useState(1);
+  const [ordine, setOrdine] = useState("urgenti");
   const [aperta, setAperta] = useState(null); // camera selezionata (numero)
   const [uploading, setUploading] = useState(false);
+  const [inAttesa, setInAttesa] = useState(0);
   const fileRef = useRef(null);
 
+  // Offline-first: se si e' online scarica lo stato fresco da Supabase e lo
+  // riconcilia con la cache locale (le modifiche ancora in coda, se piu'
+  // recenti, restano valide); in ogni caso il tabellone mostrato viene
+  // sempre letto dalla cache Dexie, cosi' funziona anche appena aperto
+  // offline con l'ultimo stato salvato sul telefono.
   const refresh = useCallback(async () => {
-    const [g, l] = await Promise.all([
-      DB.loadCamereGiorno(),
-      DB.loadCamereLavoro(),
-    ]);
-    setGiorno(g);
-    setLavoro(l);
+    if (typeof navigator === "undefined" || navigator.onLine) {
+      const [g, l] = await Promise.all([
+        DB.loadCamereGiorno(),
+        DB.loadCamereLavoro(),
+      ]);
+      if (g.length || l.length) await cacheSnapshot(g, l);
+    }
+    const cached = await getCachedSnapshot();
+    setGiorno(cached.giorno);
+    setLavoro(cached.lavoro);
     setLoading(false);
+  }, []);
+
+  const aggiornaInAttesa = useCallback(() => {
+    contaInAttesa().then(setInAttesa);
   }, []);
 
   useEffect(() => {
@@ -230,6 +254,16 @@ export default function Camere({ user, onFlash }) {
     return () => supabase.removeChannel(ch);
   }, [refresh]);
 
+  useEffect(() => {
+    const fermaSync = avviaSyncAutomatico();
+    aggiornaInAttesa();
+    const timer = setInterval(aggiornaInAttesa, 4000);
+    return () => {
+      fermaSync();
+      clearInterval(timer);
+    };
+  }, [aggiornaInAttesa]);
+
   const lavoroByCamera = useMemo(() => {
     const m = {};
     lavoro.forEach((l) => (m[l.camera] = l));
@@ -245,12 +279,17 @@ export default function Camere({ user, onFlash }) {
   );
 
   const sorted = useMemo(() => {
+    if (ordine === "numero") {
+      return [...camere].sort((a, b) =>
+        a.camera.localeCompare(b.camera, undefined, { numeric: true }),
+      );
+    }
     const peso = (c) =>
       c.stato_slope === "b2b" ? 0 : c.lavoro === "fatto" ? 3 : c.stato_slope === "libera" ? 2 : 1;
     return [...camere].sort(
       (a, b) => peso(a) - peso(b) || a.camera.localeCompare(b.camera, undefined, { numeric: true }),
     );
-  }, [camere]);
+  }, [camere, ordine]);
 
   const contaDaFarePerPiano = useCallback(
     (p) =>
@@ -269,16 +308,27 @@ export default function Camere({ user, onFlash }) {
   const puoCaricare = RUOLI_CARICAMENTO.includes(user.role);
   const puoModificare = RUOLI_MODIFICA.includes(user.role);
 
+  // Scrive subito in locale (Dexie) e mette in coda per Supabase: funziona
+  // anche senza rete, il tocco non va mai perso. onFlash/refresh leggono
+  // di nuovo dalla cache, non da Supabase, cosi' la card si aggiorna
+  // all'istante anche offline.
   const segnaLavoro = async (camera, stato) => {
-    await DB.segnaLavoroCamera(camera, stato, user.name);
+    await enqueueLavoro(camera, stato, user.name);
+    const cached = await getCachedSnapshot();
+    setGiorno(cached.giorno);
+    setLavoro(cached.lavoro);
+    aggiornaInAttesa();
     onFlash?.(`Camera ${camera} · ${LAVORO_LABELS[stato].toLowerCase()}`);
-    refresh();
   };
 
   const salvaModifica = async (camera, campi) => {
-    await DB.aggiornaCameraGiorno(camera, campi, user.name);
+    const attuale = giorno.find((c) => c.camera === camera);
+    await enqueueModifica(camera, campi, user.name, attuale);
+    const cached = await getCachedSnapshot();
+    setGiorno(cached.giorno);
+    setLavoro(cached.lavoro);
+    aggiornaInAttesa();
     onFlash?.(`Camera ${camera} aggiornata`);
-    refresh();
   };
 
   const caricaFile = async (e) => {
@@ -305,6 +355,29 @@ export default function Camere({ user, onFlash }) {
 
   return (
     <main style={{ maxWidth: 760, margin: "0 auto", padding: "14px 14px 90px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 6,
+          fontSize: 11.5,
+          fontWeight: 700,
+          color: inAttesa ? "#B23A2E" : "#2E7D5B",
+          marginBottom: 10,
+        }}
+      >
+        <span
+          style={{
+            width: 7,
+            height: 7,
+            borderRadius: "50%",
+            background: inAttesa ? "#B23A2E" : "#2E7D5B",
+            flexShrink: 0,
+          }}
+        />
+        {inAttesa ? `${inAttesa} in attesa di rete` : "Sincronizzato"}
+      </div>
+
       {puoCaricare && (
         <div style={{ marginBottom: 14 }}>
           <input
@@ -386,6 +459,27 @@ export default function Camere({ user, onFlash }) {
             </button>
           );
         })}
+      </div>
+
+      <div style={{ display: "flex", gap: 6, marginBottom: 10 }}>
+        {Object.entries(ORDINE_LABELS).map(([val, label]) => (
+          <button
+            key={val}
+            onClick={() => setOrdine(val)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: "1.5px solid " + (ordine === val ? "#0E5C49" : "#E4E0D6"),
+              background: ordine === val ? "#0E5C49" : "#fff",
+              color: ordine === val ? "#fff" : "#5C645E",
+            }}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       {loading ? (

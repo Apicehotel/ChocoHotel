@@ -650,14 +650,17 @@ export const DB = {
     }
     return data;
   },
-  async segnaLavoroCamera(camera, stato, nome) {
+  // `ts` (ms epoch) e' opzionale: se l'azione arriva dalla coda offline, e'
+  // il momento del tocco originale, non quello (successivo) del sync, cosi'
+  // il confronto "ultima modifica vince" con Realtime resta corretto.
+  async segnaLavoroCamera(camera, stato, nome, ts) {
     const { error } = await supabase
       .from("camere_lavoro")
       .upsert({
         camera,
         stato,
         da_chi: nome,
-        aggiornato_il: new Date().toISOString(),
+        aggiornato_il: new Date(ts || Date.now()).toISOString(),
       });
     if (error) console.error(error);
     return !error;
@@ -665,15 +668,16 @@ export const DB = {
   // Modifica manuale di una camera (reception/governante): cambia stato_slope,
   // letti o note. Marca sempre manuale=true con chi e quando, cosi' resta
   // tracciabile rispetto ai dati originali del file Slope.
-  async aggiornaCameraGiorno(camera, campi, nome) {
+  async aggiornaCameraGiorno(camera, campi, nome, ts) {
+    const iso = new Date(ts || Date.now()).toISOString();
     const { error } = await supabase
       .from("camere_giorno")
       .update({
         ...campi,
         manuale: true,
         manuale_da: nome,
-        manuale_il: new Date().toISOString(),
-        aggiornato_il: new Date().toISOString(),
+        manuale_il: iso,
+        aggiornato_il: iso,
       })
       .eq("camera", camera);
     if (error) console.error(error);
