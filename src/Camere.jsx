@@ -48,6 +48,14 @@ const LAVORO_COLORS = {
 };
 const LETTI_CHIPS = ["Matrimoniale", "Singolo", "Culla", "Letto aggiunto"];
 const ORDINE_LABELS = { urgenti: "Urgenti prima", numero: "Per numero" };
+// Regola fondamentale: SOLO le camere libere partono gia' "fatto" (niente
+// da fare); tutte le altre (b2b, partenza, arrivo, fermata) partono
+// "dafare", anche se per qualche motivo manca ancora il record esplicito in
+// camere_lavoro (l'RPC di caricamento lo crea sempre, questo e' solo un
+// fallback difensivo coerente con la stessa regola).
+function lavoroDefault(statoSlope) {
+  return statoSlope === "libera" ? "fatto" : "dafare";
+}
 
 // ── Lookup camera → struttura/piano ufficiale, dal file zoneData.js ─────────
 // Usato sia per completare il tabellone con le camere non presenti nel file
@@ -342,7 +350,7 @@ export default function Camere({ user, onFlash }) {
     () =>
       giorno
         .filter((c) => c.struttura === struttura && c.piano === piano)
-        .map((c) => ({ ...c, lavoro: lavoroByCamera[c.camera]?.stato || "dafare" })),
+        .map((c) => ({ ...c, lavoro: lavoroByCamera[c.camera]?.stato || lavoroDefault(c.stato_slope) })),
     [giorno, struttura, piano, lavoroByCamera],
   );
 
@@ -370,25 +378,23 @@ export default function Camere({ user, onFlash }) {
 
   const contaDaFarePerPiano = useCallback(
     (p) =>
-      giorno.filter(
-        (c) =>
-          c.struttura === struttura &&
-          c.piano === p &&
-          c.stato_slope !== "libera" &&
-          (lavoroByCamera[c.camera]?.stato || "dafare") !== "fatto",
-      ).length,
+      giorno.filter((c) => {
+        if (c.struttura !== struttura || c.piano !== p) return false;
+        if (c.stato_slope === "libera") return false;
+        const stato = lavoroByCamera[c.camera]?.stato || "dafare";
+        return stato !== "fatto" && stato !== "nondist"; // = !gestita(c)
+      }).length,
     [giorno, struttura, lavoroByCamera],
   );
 
   const contaB2bPerPiano = useCallback(
     (p) =>
-      giorno.filter(
-        (c) =>
-          c.struttura === struttura &&
-          c.piano === p &&
-          c.stato_slope === "b2b" &&
-          (lavoroByCamera[c.camera]?.stato || "dafare") !== "fatto",
-      ).length,
+      giorno.filter((c) => {
+        if (c.struttura !== struttura || c.piano !== p) return false;
+        if (c.stato_slope !== "b2b") return false;
+        const stato = lavoroByCamera[c.camera]?.stato || "dafare";
+        return stato !== "fatto" && stato !== "nondist"; // = !gestita(c)
+      }).length,
     [giorno, struttura, lavoroByCamera],
   );
 
@@ -615,7 +621,7 @@ export default function Camere({ user, onFlash }) {
 
       {cameraAperta && (
         <CameraSheet
-          c={{ ...cameraAperta, lavoro: lavoroByCamera[cameraAperta.camera]?.stato || "dafare" }}
+          c={{ ...cameraAperta, lavoro: lavoroByCamera[cameraAperta.camera]?.stato || lavoroDefault(cameraAperta.stato_slope) }}
           puoModificare={puoModificare}
           onClose={() => setAperta(null)}
           onSegnaLavoro={segnaLavoro}
