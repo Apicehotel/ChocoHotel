@@ -642,6 +642,19 @@ export const DB = {
     }
     return data;
   },
+  // Ricerca mirata di una sola camera nel tabellone del giorno: usata dal
+  // form "Nuova segnalazione" per suggerire lo Stato camera (In arrivo /
+  // Fermata con cliente / Libera) in base a quello che dice l'housekeeping
+  // di oggi, invece di doverlo scegliere sempre a mano.
+  async getCameraGiornoOggi(camera) {
+    const { data, error } = await supabase
+      .from("camere_giorno")
+      .select("camera, stato_slope")
+      .eq("camera", String(camera))
+      .maybeSingle();
+    if (error) return null;
+    return data;
+  },
   async loadCamereLavoro() {
     const { data, error } = await supabase.from("camere_lavoro").select("*");
     if (error) {

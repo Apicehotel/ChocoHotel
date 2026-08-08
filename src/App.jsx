@@ -6123,8 +6123,33 @@ function NewForm({ user, onClose, onSave, zones, initial }) {
   const [photo, setPhoto] = useState(initial?.photoBefore || null);
   const [busy, setBusy] = useState(false);
   const [roomStatus, setRoomStatus] = useState(initial?.roomStatus || null);
+  const [roomStatusSuggerito, setRoomStatusSuggerito] = useState(false);
   const canSetRoomStatus =
     user.role !== "manutentore" && user.role !== "responsabile_area";
+  // Suggerimento automatico dello Stato camera in base all'housekeeping di
+  // oggi (modulo Camere): non forza nulla, si può sempre cambiare a mano.
+  useEffect(() => {
+    if (editing || !room || !canSetRoomStatus || !/^\d{2,4}$/.test(room)) return;
+    let annullato = false;
+    DB.getCameraGiornoOggi(room).then((row) => {
+      if (annullato || !row) return;
+      const mappa = {
+        libera: "libera",
+        arrivo: "arrivo",
+        partenza: "fermata_cliente",
+        fermata: "fermata_cliente",
+        b2b: "fermata_cliente",
+      };
+      const suggerito = mappa[row.stato_slope];
+      if (suggerito) {
+        setRoomStatus(suggerito);
+        setRoomStatusSuggerito(true);
+      }
+    });
+    return () => {
+      annullato = true;
+    };
+  }, [room]);
   const [camMode, setCamMode] = useState("camera");
   useEffect(() => {
     if (zones && zones.length === 1 && !room) setRoom(zones[0]);
@@ -6198,6 +6223,18 @@ function NewForm({ user, onClose, onSave, zones, initial }) {
       {canSetRoomStatus && camMode === "camera" && (
         <Field label="Stato camera">
           {" "}
+          {roomStatusSuggerito && (
+            <div
+              style={{
+                fontSize: 11.5,
+                color: "#0E5C49",
+                marginBottom: 6,
+                fontWeight: 600,
+              }}
+            >
+              🏠 Suggerito da Housekeeping (oggi) — puoi cambiarlo
+            </div>
+          )}
           <div
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}
           >
@@ -6205,7 +6242,10 @@ function NewForm({ user, onClose, onSave, zones, initial }) {
             {Object.entries(ROOM_ST).map(([k, v]) => (
               <button
                 key={k}
-                onClick={() => setRoomStatus(roomStatus === k ? null : k)}
+                onClick={() => {
+                  setRoomStatus(roomStatus === k ? null : k);
+                  setRoomStatusSuggerito(false);
+                }}
                 style={{
                   padding: "10px 8px",
                   borderRadius: 11,
