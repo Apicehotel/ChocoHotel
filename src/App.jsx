@@ -5907,7 +5907,6 @@ function PlannedDetail({
             ref={fileRef}
             type="file"
             accept="image/*"
-            capture="environment"
             hidden
             onChange={pickPhoto}
           />{" "}
@@ -6340,7 +6339,6 @@ function NewForm({ user, onClose, onSave, zones, initial }) {
           ref={f}
           type="file"
           accept="image/*"
-          capture="environment"
           hidden
           onChange={pick}
         />{" "}
@@ -7431,7 +7429,6 @@ function Detail({
               ref={f}
               type="file"
               accept="image/*"
-              capture="environment"
               hidden
               onChange={pick}
             />
@@ -8102,7 +8099,6 @@ function FeedbackForm({ user, onClose, onFlash }) {
           ref={f}
           type="file"
           accept="image/*"
-          capture="environment"
           hidden
           onChange={pick}
         />{" "}
