@@ -47,6 +47,7 @@ function itemFromRow(r) {
     createdAt: r.creato_il ? new Date(r.creato_il).getTime() : Date.now(),
     completedBy: r.completato_da,
     completedAt: r.completato_il ? new Date(r.completato_il).getTime() : null,
+    completionNote: r.nota_completamento,
     pieceName: r.pezzo_nome,
     pieceDecision: r.pezzo_decisione,
     pieceDecisionBy: r.pezzo_decisione_da,
@@ -102,6 +103,7 @@ function itemToRow(it) {
     completato_il: it.completedAt
       ? new Date(it.completedAt).toISOString()
       : null,
+    nota_completamento: it.completionNote || null,
     pezzo_nome: it.pieceName || null,
     pezzo_decisione: it.pieceDecision || null,
     pezzo_decisione_da: it.pieceDecisionBy || null,

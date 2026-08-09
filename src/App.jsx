@@ -6579,6 +6579,7 @@ function Detail({
     needT = it.status === "tecnico",
     active = !done && !wait && !needT;
   const [photo, setPhoto] = useState(null);
+  const [notaCompletamento, setNotaCompletamento] = useState("");
   const [busy, setBusy] = useState(false);
   const [piece, setPiece] = useState(it.pieceName || "");
   const [showW, setShowW] = useState(false);
@@ -6588,6 +6589,7 @@ function Detail({
   const [lCalled, setLCalled] = useState(!!it.tecnicoCalledBy);
   const [lCalledAt] = useState(() => Date.now());
   const f = useRef();
+
   const calledBy = it.tecnicoCalledBy || (lCalled ? user.name : null);
   const calledAt = it.tecnicoCalledAt || (lCalled ? lCalledAt : null);
   const canFix =
@@ -6670,6 +6672,7 @@ function Detail({
       ...it,
       status: "done",
       photoAfter: photo,
+      completionNote: notaCompletamento.trim() || null,
       completedBy: user.name,
       completedAt: Date.now(),
     });
@@ -7365,6 +7368,18 @@ function Detail({
                 </>
               )}
             </div>
+            {it.completionNote && (
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#1B2420",
+                  marginTop: 6,
+                  lineHeight: 1.4,
+                }}
+              >
+                {it.completionNote}
+              </div>
+            )}
             {it.photoAfter && (
               <div
                 style={{
@@ -7502,6 +7517,23 @@ function Detail({
                 </span>
               </div>
             )}
+            <textarea
+              value={notaCompletamento}
+              onChange={(e) => setNotaCompletamento(e.target.value)}
+              placeholder="Note sul lavoro fatto (opzionale)"
+              style={{
+                width: "100%",
+                minHeight: 64,
+                borderRadius: 12,
+                border: "1.5px solid #E4E0D6",
+                padding: 10,
+                fontSize: 13,
+                fontFamily: "inherit",
+                resize: "vertical",
+                marginBottom: 10,
+                boxSizing: "border-box",
+              }}
+            />
             <button
               onClick={complete}
               disabled={busy || (mustPhoto && !photo)}

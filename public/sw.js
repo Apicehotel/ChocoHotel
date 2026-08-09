@@ -2,7 +2,7 @@
 // 1) Notifiche push
 // 2) Cache offline: l'app si apre senza rete e mostra gli ultimi dati scaricati
 
-const VERSION = 'v24';
+const VERSION = 'v25';
 const SHELL_CACHE = `shell-${VERSION}`;   // pagina e file statici dell'app
 const DATA_CACHE  = `data-${VERSION}`;    // ultime risposte lette da Supabase
 
