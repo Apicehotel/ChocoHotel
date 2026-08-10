@@ -68,6 +68,12 @@ export const ROOM_NUMBERS = new Set(
 export const ZONES = {
   "Giardino Jazz": ["giardino jazz", "giardino j", "verde jazz"],
   "Hall Jazz": ["hall jazz", "ingresso jazz", "reception jazz", "hall j"],
+  "Ascensore Jazz": [
+    "ascensore jazz",
+    "ascensore j",
+    "lift jazz",
+    "ascensori jazz",
+  ],
   "Ufficio Alberto": ["ufficio alberto", "stanza alberto", "alberto"],
   "Ufficio Paolo": ["ufficio paolo", "stanza paolo", "paolo"],
   Reception: ["recepion", "accoglienza"],
@@ -153,6 +159,12 @@ export const ZONES = {
   "Parcheggio -3 Jazz": ["garage", "-3"],
   "Giardino Wine": ["giardino", "verde", "aiuole", "esterno"],
   "Hall Wine": ["hall wine", "ingresso wine", "reception wine", "hall w"],
+  "Ascensore Wine": [
+    "ascensore wine",
+    "ascensore w",
+    "lift wine",
+    "ascensori wine",
+  ],
   "Scale Auditorium": ["scale auditorium", "scala auditorium"],
   "Office Wine": [
     "office wine",
