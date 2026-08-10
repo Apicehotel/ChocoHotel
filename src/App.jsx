@@ -4998,7 +4998,7 @@ function NewPlanned({ user, tec, onClose, onSave, initial }) {
         />{" "}
       </Field>{" "}
       <Field label={isExtraPiani ? "Periodo *" : "Data e ora *"}>
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 16 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <label
               style={{
