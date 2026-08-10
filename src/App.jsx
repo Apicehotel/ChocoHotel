@@ -4997,59 +4997,47 @@ function NewPlanned({ user, tec, onClose, onSave, initial }) {
           onChange={(e) => setNotes(e.target.value)}
         />{" "}
       </Field>{" "}
-      {isExtraPiani ? (
-        <Field label="Periodo *">
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  fontSize: 11.5,
-                  color: "#8A9490",
-                  display: "block",
-                  marginBottom: 4,
-                }}
-              >
-                Da
-              </label>
-              <input
-                style={inputSt}
-                type="date"
-                value={dt}
-                onChange={(e) => setDt(e.target.value)}
-              />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label
-                style={{
-                  fontSize: 11.5,
-                  color: "#8A9490",
-                  display: "block",
-                  marginBottom: 4,
-                }}
-              >
-                A
-              </label>
-              <input
-                style={inputSt}
-                type="date"
-                value={dtTo}
-                min={dt || undefined}
-                onChange={(e) => setDtTo(e.target.value)}
-              />
-            </div>
+      <Field label={isExtraPiani ? "Periodo *" : "Data e ora *"}>
+        <div style={{ display: "flex", gap: 10 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <label
+              style={{
+                fontSize: 11.5,
+                color: "#8A9490",
+                display: "block",
+                marginBottom: 4,
+              }}
+            >
+              Da
+            </label>
+            <input
+              style={inputSt}
+              type={isExtraPiani ? "date" : "datetime-local"}
+              value={dt}
+              onChange={(e) => setDt(e.target.value)}
+            />
           </div>
-        </Field>
-      ) : (
-        <Field label="Data e ora prevista *">
-          {" "}
-          <input
-            style={inputSt}
-            type="datetime-local"
-            value={dt}
-            onChange={(e) => setDt(e.target.value)}
-          />{" "}
-        </Field>
-      )}{" "}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <label
+              style={{
+                fontSize: 11.5,
+                color: "#8A9490",
+                display: "block",
+                marginBottom: 4,
+              }}
+            >
+              A{isExtraPiani ? "" : " (opzionale)"}
+            </label>
+            <input
+              style={inputSt}
+              type={isExtraPiani ? "date" : "datetime-local"}
+              value={dtTo}
+              min={dt || undefined}
+              onChange={(e) => setDtTo(e.target.value)}
+            />
+          </div>
+        </div>
+      </Field>{" "}
       <Field label="Assegna a *">
         {" "}
         <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
@@ -5143,8 +5131,11 @@ function NewPlanned({ user, tec, onClose, onSave, initial }) {
             scheduledAt: dt
               ? new Date(isExtraPiani ? dt + "T00:00" : dt).getTime()
               : null,
-            scheduledUntil:
-              isExtraPiani && dtTo ? new Date(dtTo + "T23:59").getTime() : null,
+            scheduledUntil: dtTo
+              ? new Date(
+                  isExtraPiani ? dtTo + "T23:59" : dtTo,
+                ).getTime()
+              : null,
             piani: isExtraPiani
               ? pianiSelezionati
               : isFiltri

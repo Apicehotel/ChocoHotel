@@ -11,6 +11,7 @@ const IconBack = (
 
 export const inputSt = {
   width: "100%",
+  boxSizing: "border-box",
   background: "#fff",
   border: "1px solid #E4E0D6",
   borderRadius: 11,
