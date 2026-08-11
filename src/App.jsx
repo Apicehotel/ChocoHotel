@@ -3952,129 +3952,118 @@ function PlanningLavori({ user, onClose, onFlash }) {
         </button>
       )}
 
-      {Array.from({ length: weeks }, (_, wi) =>
-        days.slice(wi * 7, wi * 7 + 7),
-      ).map((weekDays, wi) => {
-        const weekLavori = visibleLavori.filter((l) =>
-          l.giorniVisibili.some((g) => weekDays.some((d) => fmtISO(d) === g.data)),
-        );
+      {days.map((d) => {
+        const ds = fmtISO(d);
+        const lavoriDelGiorno = visibleLavori
+          .map((l) => ({
+            lavoro: l,
+            giorno: l.giorni.find((g) => g.data === ds),
+          }))
+          .filter((x) => x.giorno)
+          .sort((a, b) =>
+            a.lavoro.descrizione.localeCompare(b.lavoro.descrizione, "it"),
+          );
+        const oggiStr = fmtISO(new Date());
         return (
-          <div key={wi} style={{ marginBottom: weeks > 1 ? 20 : 0 }}>
-            {weeks > 1 && (
-              <div
+          <div key={ds} style={{ marginBottom: 16 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: 8,
+                marginBottom: 8,
+                paddingBottom: 6,
+                borderBottom: "1.5px solid " + (ds === oggiStr ? "#0E5C49" : "#E4E0D6"),
+              }}
+            >
+              <span
                 style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "#8A8A85",
-                  marginBottom: 6,
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: ds === oggiStr ? "#0E5C49" : "#1B2420",
                 }}
               >
-                {fmtDayShort(weekDays[0])} – {fmtDayShort(weekDays[6])}
+                {WD_IT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
+              </span>
+              {ds === oggiStr && (
+                <span style={{ fontSize: 11, color: "#0E5C49", fontWeight: 700 }}>
+                  · oggi
+                </span>
+              )}
+            </div>
+            {lavoriDelGiorno.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: "#B0B5AC", paddingLeft: 2 }}>
+                Nessun lavoro.
               </div>
-            )}
-            <div style={{ overflowX: "auto" }}>
-              <table
-                style={{
-                  borderCollapse: "collapse",
-                  width: "100%",
-                  minWidth: 7 * 60,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th style={thPLSt}></th>
-                    {weekDays.map((d) => (
-                      <th key={fmtISO(d)} style={thPLSt}>
-                        <div style={{ fontSize: 10, color: "#8A8A85" }}>
-                          {WD_IT[d.getDay()]}
-                        </div>
-                        <div>
-                          {d.getDate()}/{d.getMonth() + 1}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {weekLavori.map((l) => (
-                    <tr key={l.id}>
-                      <td style={tdLabelSt}>
-                        {l.descrizione}
-                        {canCreate && (
-                          <button
-                            onClick={() => handleDelete(l)}
-                            style={{
-                              marginLeft: 6,
-                              background: "none",
-                              border: "none",
-                              color: "#B23A2E",
-                              cursor: "pointer",
-                              fontSize: 12,
-                            }}
-                          >
-                            {I.trash}
-                          </button>
-                        )}
-                      </td>
-                      {weekDays.map((d) => {
-                        const ds = fmtISO(d);
-                        const g = l.giorni.find((x) => x.data === ds);
-                        return (
-                          <td key={ds} style={tdCellSt}>
-                            {g && (
-                              <button
-                                onClick={() =>
-                                  canMark &&
-                                  setMarkTarget({ lavoro: l, giorno: g })
-                                }
-                                title={g.note || ""}
-                                style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 8,
-                                  border: "none",
-                                  cursor: canMark ? "pointer" : "default",
-                                  background:
-                                    g.stato === "fatto"
-                                      ? "#2E7D5B"
-                                      : g.stato === "da_finire"
-                                        ? "#D97706"
-                                        : "#FCD34D",
-                                  color:
-                                    g.stato === "aperto" ? "#7a5212" : "#fff",
-                                  fontSize: 15,
-                                }}
-                              >
-                                {g.stato === "fatto"
-                                  ? "✓"
-                                  : g.stato === "da_finire"
-                                    ? "~"
-                                    : "•"}
-                              </button>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                  {weekLavori.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={8}
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                {lavoriDelGiorno.map(({ lavoro: l, giorno: g }) => (
+                  <div
+                    key={l.id}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      background: "#fff",
+                      border: "1px solid #E4E0D6",
+                      borderRadius: 12,
+                      padding: "10px 12px",
+                    }}
+                  >
+                    <button
+                      onClick={() => canMark && setMarkTarget({ lavoro: l, giorno: g })}
+                      title={g.note || ""}
+                      style={{
+                        flexShrink: 0,
+                        width: 32,
+                        height: 32,
+                        borderRadius: 8,
+                        border: "none",
+                        cursor: canMark ? "pointer" : "default",
+                        background:
+                          g.stato === "fatto"
+                            ? "#2E7D5B"
+                            : g.stato === "da_finire"
+                              ? "#D97706"
+                              : "#FCD34D",
+                        color: g.stato === "aperto" ? "#7a5212" : "#fff",
+                        fontSize: 15,
+                      }}
+                    >
+                      {g.stato === "fatto" ? "✓" : g.stato === "da_finire" ? "~" : "•"}
+                    </button>
+                    <div
+                      style={{
+                        flex: 1,
+                        minWidth: 0,
+                        fontSize: 13.5,
+                        color: "#1B2420",
+                        textDecoration: g.stato === "fatto" ? "line-through" : "none",
+                        opacity: g.stato === "fatto" ? 0.6 : 1,
+                      }}
+                    >
+                      {l.descrizione}
+                    </div>
+                    {canCreate && (
+                      <button
+                        onClick={() => handleDelete(l)}
                         style={{
-                          padding: 20,
-                          textAlign: "center",
-                          color: "#8A8A85",
+                          flexShrink: 0,
+                          background: "none",
+                          border: "none",
+                          color: "#B23A2E",
+                          cursor: "pointer",
                           fontSize: 13,
+                          padding: 4,
                         }}
                       >
-                        Nessun lavoro in questa settimana.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        {I.trash}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })}
