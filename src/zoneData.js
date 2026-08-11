@@ -67,7 +67,7 @@ export const ROOM_NUMBERS = new Set(
 
 export const ZONES = {
   "Giardino Jazz": ["giardino jazz", "giardino j", "verde jazz"],
-  "Hall Jazz": ["hall jazz", "ingresso jazz", "reception jazz", "hall j"],
+  "Hall Jazz": ["hall jazz", "ingresso jazz", "reception jazz", "hall j", "hall"],
   "Ascensore Sinistra Jazz": [],
   "Ascensore Destra Jazz": [],
   "Ascensore Staff Jazz": [],
@@ -180,6 +180,7 @@ export const ZONES = {
   "Corridoio 3 Wine": [],
   "Office 4 Wine": ["quarto wine", "4 wine", "4wine", "ufficio quarto wine"],
   "Corridoio 4 Wine": [],
+  "Centro Congressi": [],
 };
 
 export const ZONE_NAMES = Object.keys(ZONES);
