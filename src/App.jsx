@@ -9996,12 +9996,12 @@ function MyWorkPage({ user, items, planned, onClose, onOpen }) {
     </div>
   );
 } // ── WACenter ──────────────────────────────────────────────────────────────────
-// Client Supabase in sola lettura per il Chocohotel, usato solo qui per
-// mostrare i suoi consumi accanto a quelli di Hotel Giò in un unico posto.
-// Chiave pubblica (publishable), la stessa gia' usata dall'app Chocohotel.
-const chocoSupabase = createClient(
-  "https://ooqlfldcrnkudhgjnied.supabase.co",
-  "sb_publishable_Oiu7IOhuUd6YPEDmmSa7zA_ngNuiSlX",
+// Client Supabase in sola lettura per Hotel Gio', usato solo qui per
+// mostrare i suoi consumi accanto a quelli di Chocohotel in un unico posto.
+// Chiave pubblica (publishable), la stessa gia' usata dall'app Hotel Gio'.
+const hotelGioSupabase = createClient(
+  "https://jmhzmwyolxzacjunfwcq.supabase.co",
+  "sb_publishable_XTYCLV5jSdk3ztG7PNuL_Q_1zu3tDwJ",
 );
 
 const LIMITI_FREE = {
@@ -10112,12 +10112,12 @@ function PannelloConsumi({ onClose }) {
     setErrore(null);
     try {
       const [gioRes, chocoRes, twilioRes, vercelRes] = await Promise.all([
+        hotelGioSupabase.rpc("get_usage_stats"),
         supabase.rpc("get_usage_stats"),
-        chocoSupabase.rpc("get_usage_stats"),
         fetch(
           "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/check-twilio-usage",
         ).then((r) => r.json()),
-        supabase
+        hotelGioSupabase
           .from("app_config")
           .select("value")
           .eq("key", "vercel_usage_note")
@@ -10360,8 +10360,10 @@ function PannelloConsumi({ onClose }) {
                   <div
                     style={{ fontSize: 11, color: "#8A9490", marginTop: 8 }}
                   >
-                    Aggiornato a mano il {vercelNote.aggiornato_il} (nessun
-                    accesso API diretto — vedi nota sotto)
+                    Aggiornato a mano il {vercelNote.aggiornato_il} — dati del
+                    progetto Vercel di Hotel Giò (nessuna nota separata per
+                    Chocohotel al momento, nessun accesso API diretto — vedi
+                    nota sotto)
                   </div>
                 </>
               )}
