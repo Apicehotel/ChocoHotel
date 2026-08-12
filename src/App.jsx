@@ -2221,15 +2221,18 @@ export default function App() {
       ? [
           {
             icon: I.hotel,
-            label: "Vai a Chocohotel",
+            label: "Vai a Hotel Giò",
             fn: () => {
-              setSwitchConfirm("https://chocohotel.vercel.app");
+              setSwitchConfirm("https://hotelgio.vercel.app");
               setMenuOpen(false);
             },
           },
         ]
       : []),
-    ...(isGestione
+    // Centro WhatsApp: nascosto a Chocohotel finche' non arriva un numero
+    // WhatsApp dedicato (manca ancora). "false &&" invece di rimuovere il
+    // codice, cosi' riattivarlo in futuro e' un solo carattere da togliere.
+    ...(false && isGestione
       ? [
           {
             icon: I.msg,
@@ -6585,8 +6588,8 @@ function Detail({
     user.role === "sviluppatore" ||
     user.role === "reception";
   const canCall =
+    false && // Centro WhatsApp disattivato a Chocohotel (manca il numero dedicato)
     (user.role === "direzione" ||
-      user.role === "direzione" ||
       user.role === "sviluppatore" ||
       user.role === "reception") &&
     needT;
