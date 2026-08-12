@@ -845,8 +845,8 @@ function CameraZonaField({
               flex: 1,
               padding: "8px 10px",
               borderRadius: 9,
-              border: "1.5px solid " + (mode === m ? "#0E5C49" : "#E4E0D6"),
-              background: mode === m ? "#0E5C49" : "#fff",
+              border: "1.5px solid " + (mode === m ? "#640A0A" : "#E4E0D6"),
+              background: mode === m ? "#640A0A" : "#fff",
               color: mode === m ? "#fff" : "#5C645E",
               fontWeight: 700,
               fontSize: 12.5,
@@ -906,7 +906,7 @@ function CameraZonaField({
                 padding: "10px 13px",
                 fontSize: 14,
                 cursor: "pointer",
-                borderBottom: "1px solid #F4F2ED",
+                borderBottom: "1px solid #F7F0E3",
               }}
             >
               {s}
@@ -926,14 +926,14 @@ function FullPage({ onClose, title, children }) {
         position: "fixed",
         inset: 0,
         zIndex: 60,
-        background: "#F4F2ED",
+        background: "#F7F0E3",
         display: "flex",
         flexDirection: "column",
       }}
     >
       <div
         style={{
-          background: "#0E5C49",
+          background: "#640A0A",
           color: "#fff",
           padding: "calc(env(safe-area-inset-top, 0px) + 12px) 14px 12px",
           display: "flex",
@@ -1096,7 +1096,7 @@ function ForceChangePin({ user, onDone, onFlash }) {
         position: "fixed",
         inset: 0,
         zIndex: 100,
-        background: "#F4F2ED",
+        background: "#F7F0E3",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1296,9 +1296,9 @@ function SlotSheet({ onClose, onSave, isBusy }) {
                   fontSize: 13,
                   fontWeight: 600,
                   cursor: "pointer",
-                  border: "1.5px solid " + (sel ? "#0E5C49" : "#E4E0D6"),
+                  border: "1.5px solid " + (sel ? "#640A0A" : "#E4E0D6"),
                   background: sel ? "#E6F2EB" : "#fff",
-                  color: sel ? "#0E5C49" : "#5C645E",
+                  color: sel ? "#640A0A" : "#5C645E",
                 }}
               >
                 {f.fam}
@@ -1324,8 +1324,8 @@ function SlotSheet({ onClose, onSave, isBusy }) {
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: "pointer",
-                    border: "1.5px solid " + (sel ? "#0E5C49" : "#E4E0D6"),
-                    background: sel ? "#0E5C49" : "#fff",
+                    border: "1.5px solid " + (sel ? "#640A0A" : "#E4E0D6"),
+                    background: sel ? "#640A0A" : "#fff",
                     color: sel ? "#fff" : "#5C645E",
                   }}
                 >
@@ -1492,7 +1492,7 @@ function PlanningSale({ user, onClose, onFlash }) {
               padding: "9px 6px",
               borderRadius: 10,
               border: "1px solid #E4E0D6",
-              background: view === v.key ? "#0E5C49" : "#fff",
+              background: view === v.key ? "#640A0A" : "#fff",
               color: view === v.key ? "#fff" : "#1B2420",
               fontWeight: 600,
               fontSize: 13,
@@ -1575,7 +1575,7 @@ function PlanningSale({ user, onClose, onFlash }) {
                   borderBottom: "1px solid #F0EEE7",
                   fontWeight: 700,
                   fontSize: 13.5,
-                  color: isToday ? "#0E5C49" : "#1B2420",
+                  color: isToday ? "#640A0A" : "#1B2420",
                   display: "flex",
                   justifyContent: "space-between",
                 }}
@@ -1675,7 +1675,7 @@ function PlanningSale({ user, onClose, onFlash }) {
             bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)",
             left: "50%",
             transform: "translateX(-50%)",
-            background: "#0E5C49",
+            background: "#640A0A",
             color: "#fff",
             fontWeight: 700,
             fontSize: 15,
@@ -1684,7 +1684,7 @@ function PlanningSale({ user, onClose, onFlash }) {
             border: "none",
             cursor: "pointer",
             whiteSpace: "nowrap",
-            boxShadow: "0 10px 30px -8px rgba(14,92,73,.6)",
+            boxShadow: "0 10px 30px -8px rgba(100,10,10,.6)",
             zIndex: 65,
             display: "flex",
             alignItems: "center",
@@ -2085,7 +2085,7 @@ export default function App() {
           alignItems: "center",
           justifyContent: "center",
           gap: 16,
-          background: "#F4F2ED",
+          background: "#F7F0E3",
           fontFamily: "ui-sans-serif,system-ui,-apple-system,sans-serif",
         }}
       >
@@ -2094,7 +2094,7 @@ export default function App() {
             width: 44,
             height: 44,
             borderRadius: 12,
-            background: "#0E5C49",
+            background: "#640A0A",
             display: "grid",
             placeItems: "center",
             color: "#fff",
@@ -2398,7 +2398,7 @@ export default function App() {
   return (
     <div
       style={{
-        background: "#F4F2ED",
+        background: "#F7F0E3",
         minHeight: "100vh",
         fontFamily: "ui-sans-serif,system-ui,-apple-system,sans-serif",
         color: "#1B2420",
@@ -2410,7 +2410,7 @@ export default function App() {
           position: "sticky",
           top: 0,
           zIndex: 20,
-          background: "#0E5C49",
+          background: "#640A0A",
           color: "#fff",
           boxShadow: "0 2px 12px rgba(0,0,0,.15)",
         }}
@@ -2591,7 +2591,7 @@ export default function App() {
           >
             <div
               style={{
-                background: "#0E5C49",
+                background: "#640A0A",
                 padding: "20px 16px 16px",
                 color: "#fff",
               }}
@@ -2669,7 +2669,7 @@ export default function App() {
                     padding: "13px 20px",
                     background: "none",
                     border: "none",
-                    borderBottom: "1px solid #F4F2ED",
+                    borderBottom: "1px solid #F7F0E3",
                     cursor: v.disabled ? "default" : "pointer",
                     color: v.disabled ? "#ccc" : "#1B2420",
                     fontSize: 14,
@@ -2682,7 +2682,7 @@ export default function App() {
                       width: 34,
                       height: 34,
                       borderRadius: 9,
-                      background: "#F4F2ED",
+                      background: "#F7F0E3",
                       display: "grid",
                       placeItems: "center",
                       flexShrink: 0,
@@ -2704,7 +2704,7 @@ export default function App() {
                 }}
               />
             </div>
-            <div style={{ borderTop: "1px solid #F4F2ED" }}>
+            <div style={{ borderTop: "1px solid #F7F0E3" }}>
               <button
                 onClick={() => {
                   logout();
@@ -3905,7 +3905,7 @@ function PlanningLavori({ user, onClose, onFlash }) {
               padding: "9px 6px",
               borderRadius: 10,
               border: "1px solid #E4E0D6",
-              background: weeks === n ? "#0E5C49" : "#fff",
+              background: weeks === n ? "#640A0A" : "#fff",
               color: weeks === n ? "#fff" : "#1B2420",
               fontWeight: 600,
               fontSize: 13,
@@ -3973,20 +3973,20 @@ function PlanningLavori({ user, onClose, onFlash }) {
                 gap: 8,
                 marginBottom: 8,
                 paddingBottom: 6,
-                borderBottom: "1.5px solid " + (ds === oggiStr ? "#0E5C49" : "#E4E0D6"),
+                borderBottom: "1.5px solid " + (ds === oggiStr ? "#640A0A" : "#E4E0D6"),
               }}
             >
               <span
                 style={{
                   fontSize: 14,
                   fontWeight: 800,
-                  color: ds === oggiStr ? "#0E5C49" : "#1B2420",
+                  color: ds === oggiStr ? "#640A0A" : "#1B2420",
                 }}
               >
                 {WD_IT[d.getDay()]} {d.getDate()}/{d.getMonth() + 1}
               </span>
               {ds === oggiStr && (
-                <span style={{ fontSize: 11, color: "#0E5C49", fontWeight: 700 }}>
+                <span style={{ fontSize: 11, color: "#640A0A", fontWeight: 700 }}>
                   · oggi
                 </span>
               )}
@@ -4139,8 +4139,8 @@ function AddPlanningLavoroSheet({ days, user, onClose, onSaved }) {
                   borderRadius: 9,
                   fontSize: 12,
                   fontWeight: 600,
-                  border: on ? "1.5px solid #0E5C49" : "1.5px solid #E4E0D6",
-                  background: on ? "#0E5C49" : "#fff",
+                  border: on ? "1.5px solid #640A0A" : "1.5px solid #E4E0D6",
+                  background: on ? "#640A0A" : "#fff",
                   color: on ? "#fff" : "#1B2420",
                   cursor: "pointer",
                 }}
@@ -4662,7 +4662,7 @@ function PlannedCard({ p, user, onOpen }) {
                       fontWeight: 600,
                       padding: "2px 9px",
                       borderRadius: 999,
-                      background: "#F4F2ED",
+                      background: "#F7F0E3",
                       color: "#1B2420",
                       border: "1px solid #E4E0D6",
                       display: "inline-flex",
@@ -4795,7 +4795,7 @@ function NewPlanned({ user, tec, onClose, onSave, initial }) {
             width: 34,
             height: 34,
             borderRadius: 9,
-            background: sel ? accent + "22" : "#F4F2ED",
+            background: sel ? accent + "22" : "#F7F0E3",
             display: "grid",
             placeItems: "center",
             flexShrink: 0,
@@ -5052,7 +5052,7 @@ function NewPlanned({ user, tec, onClose, onSave, initial }) {
                 Personale interno
               </div>{" "}
               {eligible.map((u) => (
-                <AssigneeRow key={u.id} u={u} accent="#0E5C49" />
+                <AssigneeRow key={u.id} u={u} accent="#640A0A" />
               ))}{" "}
             </>
           )}{" "}
@@ -5620,10 +5620,10 @@ function PlannedDetail({
                       width: 32,
                       height: 32,
                       borderRadius: 8,
-                      background: a.isExt ? "#FEF3C7" : "#0E5C4914",
+                      background: a.isExt ? "#FEF3C7" : "#640A0A14",
                       display: "grid",
                       placeItems: "center",
-                      color: a.isExt ? "#92400E" : "#0E5C49",
+                      color: a.isExt ? "#92400E" : "#640A0A",
                     }}
                   >
                     {" "}
@@ -5977,7 +5977,7 @@ function PlannedDetail({
       {canOrderPiece && !showRepl && (
         <button
           onClick={() => setShowRepl(true)}
-          style={{ ...ctaSt, background: "#0E5C49", marginBottom: 10 }}
+          style={{ ...ctaSt, background: "#640A0A", marginBottom: 10 }}
         >
           {I.pkg} Pezzo sostituito
         </button>
@@ -6006,7 +6006,7 @@ function PlannedDetail({
               disabled={!repl.trim()}
               style={{
                 ...ctaSt,
-                background: "#0E5C49",
+                background: "#640A0A",
                 flex: 1,
                 opacity: repl.trim() ? 1 : 0.5,
               }}
@@ -6206,7 +6206,7 @@ function NewForm({ user, onClose, onSave, zones, initial }) {
             <div
               style={{
                 fontSize: 11.5,
-                color: "#0E5C49",
+                color: "#640A0A",
                 marginBottom: 6,
                 fontWeight: 600,
               }}
@@ -7530,7 +7530,7 @@ function Detail({
                 onClick={() => setShowRepl(true)}
                 style={{
                   ...ctaSt,
-                  background: "#0E5C49",
+                  background: "#640A0A",
                   fontSize: 13,
                   padding: "11px 6px",
                   marginBottom: 12,
@@ -7558,7 +7558,7 @@ function Detail({
                   <button
                     onClick={saveReplaced}
                     disabled={!repl.trim()}
-                    style={{ ...ctaSt, background: "#0E5C49", flex: 1 }}
+                    style={{ ...ctaSt, background: "#640A0A", flex: 1 }}
                   >
                     {I.check} Salva
                   </button>
@@ -7944,7 +7944,7 @@ function Tecnici({ tec, onSave, onClose }) {
           disabled={!n.trim()}
           style={{
             ...ctaSt,
-            background: "#0E5C49",
+            background: "#640A0A",
             opacity: n.trim() ? 1 : 0.5,
           }}
         >
@@ -8285,7 +8285,7 @@ function Login({ onLogin }) {
         justifyContent: "center",
         padding: 20,
         background:
-          "radial-gradient(110% 80% at 50% -10%, #1a7a5f 0%, #0e5c49 35%, #083d31 70%, #052821 100%)",
+          "radial-gradient(110% 80% at 50% -10%, #A01E1E 0%, #640A0A 35%, #4A0808 70%, #300505 100%)",
         fontFamily: "ui-sans-serif,system-ui,sans-serif",
         overflow: "hidden",
       }}
@@ -8300,7 +8300,7 @@ function Login({ onLogin }) {
           height: 380,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, rgba(94,213,178,.28), transparent 65%)",
+            "radial-gradient(circle, rgba(224,140,140,.28), transparent 65%)",
           filter: "blur(20px)",
           pointerEvents: "none",
         }}
@@ -8314,7 +8314,7 @@ function Login({ onLogin }) {
           height: 420,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, rgba(14,92,73,.45), transparent 70%)",
+            "radial-gradient(circle, rgba(74,8,8,.45), transparent 70%)",
           filter: "blur(24px)",
           pointerEvents: "none",
         }}
@@ -8356,7 +8356,7 @@ function Login({ onLogin }) {
               width: 48,
               height: 48,
               borderRadius: 13,
-              background: "#0E5C49",
+              background: "#640A0A",
               display: "grid",
               placeItems: "center",
               margin: "0 auto 12px",
@@ -8385,7 +8385,7 @@ function Login({ onLogin }) {
                 width: 16,
                 height: 16,
                 borderRadius: "50%",
-                background: pin.length > i ? "#0E5C49" : "#E4E0D6",
+                background: pin.length > i ? "#640A0A" : "#E4E0D6",
                 transition: "background .15s",
               }}
             />
@@ -8492,7 +8492,7 @@ function Login({ onLogin }) {
         justifyContent: "center",
         padding: 20,
         background:
-          "radial-gradient(110% 80% at 50% -10%, #1a7a5f 0%, #0e5c49 35%, #083d31 70%, #052821 100%)",
+          "radial-gradient(110% 80% at 50% -10%, #A01E1E 0%, #640A0A 35%, #4A0808 70%, #300505 100%)",
         fontFamily: "ui-sans-serif,system-ui,sans-serif",
         overflow: "hidden",
       }}
@@ -8507,7 +8507,7 @@ function Login({ onLogin }) {
           height: 380,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, rgba(94,213,178,.28), transparent 65%)",
+            "radial-gradient(circle, rgba(224,140,140,.28), transparent 65%)",
           filter: "blur(20px)",
           pointerEvents: "none",
         }}
@@ -8521,7 +8521,7 @@ function Login({ onLogin }) {
           height: 420,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, rgba(14,92,73,.45), transparent 70%)",
+            "radial-gradient(circle, rgba(74,8,8,.45), transparent 70%)",
           filter: "blur(24px)",
           pointerEvents: "none",
         }}
@@ -8572,9 +8572,9 @@ function Login({ onLogin }) {
               setStep("admin-pin");
             }}
             style={{
-              background: "rgba(14,92,73,.08)",
+              background: "rgba(100,10,10,.08)",
               border: "none",
-              color: "#0E5C49",
+              color: "#640A0A",
               width: 34,
               height: 34,
               borderRadius: 9,
@@ -8656,10 +8656,10 @@ function Login({ onLogin }) {
                       width: 32,
                       height: 32,
                       borderRadius: 8,
-                      background: "#0E5C4914",
+                      background: "#640A0A14",
                       display: "grid",
                       placeItems: "center",
-                      color: "#0E5C49",
+                      color: "#640A0A",
                     }}
                   >
                     {I[ROLES[u.role]?.icon]}
@@ -8855,14 +8855,14 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
     <div
       style={{
         minHeight: "100vh",
-        background: "#F4F2ED",
+        background: "#F7F0E3",
         fontFamily: "ui-sans-serif,system-ui,sans-serif",
       }}
     >
       {" "}
       <div
         style={{
-          background: "#0E5C49",
+          background: "#640A0A",
           color: "#fff",
           padding: "14px 16px",
           display: "flex",
@@ -8947,11 +8947,11 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                   width: 34,
                   height: 34,
                   borderRadius: 9,
-                  background: "#0E5C4914",
+                  background: "#640A0A14",
                   display: "grid",
                   placeItems: "center",
                   flexShrink: 0,
-                  color: "#0E5C49",
+                  color: "#640A0A",
                 }}
               >
                 {I[roleDisplayFor(u.role, u.zones).icon]}
@@ -9123,11 +9123,11 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                       style={{
                         padding: "10px 6px",
                         borderRadius: 10,
-                        border: "1.5px solid " + (sel ? "#0E5C49" : "#E4E0D6"),
-                        background: sel ? "#0E5C4914" : "#fff",
+                        border: "1.5px solid " + (sel ? "#640A0A" : "#E4E0D6"),
+                        background: sel ? "#640A0A14" : "#fff",
                         fontWeight: 600,
                         fontSize: 12,
-                        color: sel ? "#0E5C49" : "#5C645E",
+                        color: sel ? "#640A0A" : "#5C645E",
                         cursor: "pointer",
                         display: "flex",
                         alignItems: "center",
@@ -9272,8 +9272,8 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
           style={{
             ...ctaSt,
             background: "#fff",
-            color: "#0E5C49",
-            border: "1.5px solid #0E5C49",
+            color: "#640A0A",
+            border: "1.5px solid #640A0A",
             marginBottom: 8,
           }}
         >
@@ -9394,7 +9394,7 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
             {" "}
             <button
               onClick={exportBackup}
-              style={{ ...ctaSt, flex: 1, background: "#0E5C49" }}
+              style={{ ...ctaSt, flex: 1, background: "#640A0A" }}
             >
               {I.download} Esporta backup
             </button>{" "}
@@ -9404,8 +9404,8 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                 ...ctaSt,
                 flex: 1,
                 background: "#fff",
-                color: "#0E5C49",
-                border: "1.5px solid #0E5C49",
+                color: "#640A0A",
+                border: "1.5px solid #640A0A",
               }}
             >
               {I.userplus} Ripristina
@@ -9458,8 +9458,8 @@ function MyWorkBtn({ user, items, planned, onOpen }) {
         padding: "13px 20px",
         background: "none",
         border: "none",
-        borderTop: "1px solid #F4F2ED",
-        borderBottom: "1px solid #F4F2ED",
+        borderTop: "1px solid #F7F0E3",
+        borderBottom: "1px solid #F7F0E3",
         cursor: "pointer",
         color: "#1B2420",
         fontSize: 14,
@@ -9577,7 +9577,7 @@ function MyWorkPage({ user, items, planned, onClose, onOpen }) {
       {label}{" "}
       <span
         style={{
-          background: "#F4F2ED",
+          background: "#F7F0E3",
           borderRadius: 999,
           padding: "1px 8px",
           fontSize: 11,
@@ -9818,7 +9818,7 @@ function MyWorkPage({ user, items, planned, onClose, onOpen }) {
         position: "fixed",
         inset: 0,
         zIndex: 55,
-        background: "#F4F2ED",
+        background: "#F7F0E3",
         display: "flex",
         flexDirection: "column",
         fontFamily: "ui-sans-serif,system-ui,-apple-system,sans-serif",
@@ -9828,7 +9828,7 @@ function MyWorkPage({ user, items, planned, onClose, onOpen }) {
       {/* Header */}{" "}
       <div
         style={{
-          background: "#0E5C49",
+          background: "#640A0A",
           color: "#fff",
           padding: "14px 16px",
           display: "flex",
@@ -10697,11 +10697,11 @@ function WACenter({ user, items, onClose, onSave }) {
               flex: 1,
               padding: 11,
               borderRadius: 11,
-              border: "1.5px solid " + (sender === s ? "#0E5C49" : "#E4E0D6"),
+              border: "1.5px solid " + (sender === s ? "#640A0A" : "#E4E0D6"),
               background: sender === s ? "#FBFAF7" : "#fff",
               fontWeight: 700,
               fontSize: 13,
-              color: sender === s ? "#0E5C49" : "#5C645E",
+              color: sender === s ? "#640A0A" : "#5C645E",
               cursor: "pointer",
               display: "flex",
               alignItems: "center",

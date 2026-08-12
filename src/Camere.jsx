@@ -506,8 +506,8 @@ export default function Camere({ user, onFlash }) {
               fontWeight: 800,
               letterSpacing: "-0.01em",
               cursor: "pointer",
-              border: "1.5px solid " + (struttura === s ? "#0E5C49" : "#E4E0D6"),
-              background: struttura === s ? "#0E5C49" : "#fff",
+              border: "1.5px solid " + (struttura === s ? "#640A0A" : "#E4E0D6"),
+              background: struttura === s ? "#640A0A" : "#fff",
               color: struttura === s ? "#fff" : "#1B2420",
             }}
           >
@@ -531,7 +531,7 @@ export default function Camere({ user, onFlash }) {
                 borderRadius: 13,
                 textAlign: "center",
                 cursor: "pointer",
-                border: "1.5px solid " + (on ? "#0E5C49" : "#E4E0D6"),
+                border: "1.5px solid " + (on ? "#640A0A" : "#E4E0D6"),
                 background: on ? "#EAF1EE" : "#fff",
               }}
             >
@@ -552,7 +552,7 @@ export default function Camere({ user, onFlash }) {
                     alignItems: "center",
                     justifyContent: "center",
                     padding: "0 5px",
-                    border: "2px solid #F4F2ED",
+                    border: "2px solid #F7F0E3",
                   }}
                 >
                   {b}
@@ -562,7 +562,7 @@ export default function Camere({ user, onFlash }) {
                 style={{
                   fontSize: 16,
                   fontWeight: 800,
-                  color: on ? "#0E5C49" : "#1B2420",
+                  color: on ? "#640A0A" : "#1B2420",
                 }}
               >
                 {p}°
@@ -587,8 +587,8 @@ export default function Camere({ user, onFlash }) {
               fontSize: 13.5,
               fontWeight: 700,
               cursor: "pointer",
-              border: "1.5px solid " + (ordine === val ? "#0E5C49" : "#E4E0D6"),
-              background: ordine === val ? "#0E5C49" : "#fff",
+              border: "1.5px solid " + (ordine === val ? "#640A0A" : "#E4E0D6"),
+              background: ordine === val ? "#640A0A" : "#fff",
               color: ordine === val ? "#fff" : "#5C645E",
             }}
           >

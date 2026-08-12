@@ -24,7 +24,7 @@ export const inputSt = {
 
 export const ctaSt = {
   width: "100%",
-  background: "#0E5C49",
+  background: "#640A0A",
   color: "#fff",
   fontWeight: 700,
   fontSize: 15,
@@ -64,7 +64,7 @@ export function Sheet({ onClose, title, children }) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: "#F4F2ED",
+          background: "#F7F0E3",
           width: "100%",
           maxWidth: 760,
           maxHeight: "93vh",
@@ -76,7 +76,7 @@ export function Sheet({ onClose, title, children }) {
           style={{
             position: "sticky",
             top: 0,
-            background: "#F4F2ED",
+            background: "#F7F0E3",
             padding: "16px 16px 6px",
             display: "flex",
             alignItems: "center",
