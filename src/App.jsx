@@ -575,11 +575,6 @@ const ROLES = {
     desc: "Segnala dal ricevimento",
     icon: "bell",
   },
-  direttore_congressi: {
-    label: "Direttore Centro Congressi",
-    desc: "Supervisione Centro Congressi",
-    icon: "cal",
-  },
   sviluppatore: {
     label: "Sviluppatore",
     desc: "Accesso completo",
@@ -597,6 +592,8 @@ function roleDisplayFor(role, zones) {
   const zz = (zones || []).map((z) => String(z).toLowerCase());
   if (zz.some((z) => z.includes("risto")))
     return { label: "Ristorante", icon: "wine" };
+  if (zz.some((z) => z.includes("golosi")))
+    return { label: "Isola dei Golosi", icon: "coffee" };
   if (zz.some((z) => z.includes("colazioni")))
     return { label: "Colazioni", icon: "coffee" };
   return { label: "Area", icon: "list" };
@@ -608,7 +605,6 @@ const DEF_TEC = [
 ];
 const DEF_USERS = [
   { id: "d1", name: "Alberto", role: "direzione", pin: "0000" },
-  { id: "d2", name: "Paolo", role: "direttore_congressi", pin: "0000" },
   { id: "d3", name: "Michele", role: "direzione", pin: "0000" },
   { id: "d4", name: "Giovanna", role: "direzione", pin: "0000" },
   { id: "u1", name: "Domenico", role: "manutentore", pin: "0000" },
@@ -1400,7 +1396,7 @@ function SlotSheet({ onClose, onSave, isBusy }) {
 }
 function PlanningSale({ user, onClose, onFlash }) {
   const canEdit =
-    user.role === "direttore_congressi" || user.role === "sviluppatore";
+    user.role === "direzione" || user.role === "sviluppatore";
   const [prenotazioni, setPrenotazioni] = useState([]);
   const [view, setView] = useState("settimana");
   const [anchor, setAnchor] = useState(() => startOfDayP(new Date()));
@@ -1939,9 +1935,13 @@ export default function App() {
         ? { label: "Ristorante", icon: "wine" }
         : myZones
               .map((z) => String(z).toLowerCase())
-              .some((z) => z.includes("colazioni"))
-          ? { label: "Colazioni", icon: "coffee" }
-          : { label: "Area", icon: "list" }
+              .some((z) => z.includes("golosi"))
+          ? { label: "Isola dei Golosi", icon: "coffee" }
+          : myZones
+                .map((z) => String(z).toLowerCase())
+                .some((z) => z.includes("colazioni"))
+            ? { label: "Colazioni", icon: "coffee" }
+            : { label: "Area", icon: "list" }
       : null;
   const myRoleLabel = areaInfo ? areaInfo.label : ROLES[user?.role]?.label;
   const myRoleIcon = areaInfo ? areaInfo.icon : ROLES[user?.role]?.icon;
@@ -2181,7 +2181,7 @@ export default function App() {
   // ruoli che gestiscono la struttura (vedono tutto)
   const isGestione =
     user.role === "direzione" ||
-    user.role === "direttore_congressi" ||
+    user.role === "direzione" ||
     user.role === "reception" ||
     user.role === "sviluppatore";
   // chi manda o riceve le richieste urgenti: ha diritto alla scheda dedicata
@@ -2257,7 +2257,7 @@ export default function App() {
     user.role === "direzione" ||
     user.role === "manutentore" ||
     user.role === "reception" ||
-    user.role === "direttore_congressi"
+    user.role === "direzione"
       ? [
           {
             icon: I.droplet,
@@ -2302,7 +2302,7 @@ export default function App() {
       },
     },
     ...(user.role === "direzione" ||
-    user.role === "direttore_congressi" ||
+    user.role === "direzione" ||
     user.role === "sviluppatore" ||
     user.role === "reception"
       ? [
@@ -2780,7 +2780,7 @@ export default function App() {
           style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 100px" }}
         >
           {(user.role === "direzione" ||
-            user.role === "direttore_congressi" ||
+            user.role === "direzione" ||
             user.role === "sviluppatore" ||
             user.role === "reception") && (
             <div
@@ -3160,7 +3160,7 @@ export default function App() {
           style={{ maxWidth: 760, margin: "0 auto", padding: "0 16px 100px" }}
         >
           {(user.role === "direzione" ||
-            user.role === "direttore_congressi" ||
+            user.role === "direzione" ||
             user.role === "sviluppatore" ||
             user.role === "reception") &&
             cntPlan.pending > 0 && (
@@ -3344,7 +3344,7 @@ export default function App() {
                 </div>
               )}
               {(user.role === "direzione" ||
-                user.role === "direttore_congressi" ||
+                user.role === "direzione" ||
                 user.role === "sviluppatore" ||
                 user.role === "reception") && (
                 <div style={{ fontSize: 13, marginTop: 6 }}>
@@ -3381,7 +3381,7 @@ export default function App() {
             tab === "interventi" &&
             !(
               user.role === "direzione" ||
-              user.role === "direttore_congressi" ||
+              user.role === "direzione" ||
               user.role === "reception" ||
               user.role === "sviluppatore"
             )
@@ -3408,7 +3408,7 @@ export default function App() {
       )}
       {sheet === "newplan" &&
         (user.role === "direzione" ||
-          user.role === "direttore_congressi" ||
+          user.role === "direzione" ||
           user.role === "sviluppatore" ||
           user.role === "reception") && (
           <NewPlanned
@@ -3430,7 +3430,7 @@ export default function App() {
           user.role === "direzione" ||
           user.role === "manutentore" ||
           user.role === "reception" ||
-          user.role === "direttore_congressi") && (
+          user.role === "direzione") && (
           <SensoriTemperatura onClose={() => setSheet(null)} />
         )}
       {sheet === "wa" && (
@@ -3831,10 +3831,10 @@ function fmtDayShort(d) {
 
 function PlanningLavori({ user, onClose, onFlash }) {
   const canCreate =
-    user.role === "direttore_congressi" || user.role === "sviluppatore";
+    user.role === "direzione" || user.role === "sviluppatore";
   const canMark =
     user.role === "manutentore" ||
-    user.role === "direttore_congressi" ||
+    user.role === "direzione" ||
     user.role === "sviluppatore";
   const [lavori, setLavori] = useState([]);
   const [weeks, setWeeks] = useState(1);
@@ -5193,7 +5193,7 @@ function PlannedDetail({
   const canTick =
     !done &&
     (isAssigned ||
-      ["manutentore", "direzione", "reception", "direttore_congressi", "sviluppatore"].includes(
+      ["manutentore", "direzione", "reception", "direzione", "sviluppatore"].includes(
         user.role,
       ));
   const toggleRoom = (r) => {
@@ -5205,7 +5205,7 @@ function PlannedDetail({
   };
   const canComplete =
     (user.role === "direzione" ||
-      user.role === "direttore_congressi" ||
+      user.role === "direzione" ||
       user.role === "reception" ||
       user.role === "sviluppatore" ||
       user.role === "manutentore" ||
@@ -5216,13 +5216,13 @@ function PlannedDetail({
     !waiting;
   const canDelete =
     user.role === "direzione" ||
-    user.role === "direttore_congressi" ||
+    user.role === "direzione" ||
     user.role === "sviluppatore" ||
     user.role === "reception";
   const canEdit =
     user.role === "governante"
       ? p.createdBy === user.name
-      : ["direzione", "manutentore", "reception", "direttore_congressi", "sviluppatore"].includes(
+      : ["direzione", "manutentore", "reception", "direzione", "sviluppatore"].includes(
           user.role,
         );
   const canOrderPiece =
@@ -5235,7 +5235,7 @@ function PlannedDetail({
     !waiting;
   const canManageWait =
     (user.role === "direzione" ||
-      user.role === "direttore_congressi" ||
+      user.role === "direzione" ||
       user.role === "sviluppatore" ||
       user.role === "reception") &&
     waiting;
@@ -6576,24 +6576,24 @@ function Detail({
     (user.role === "manutentore" ||
       user.role === "sviluppatore" ||
       user.role === "direzione" ||
-      user.role === "direttore_congressi" ||
+      user.role === "direzione" ||
       user.role === "reception") &&
     active;
   const canMW =
     user.role === "direzione" ||
-    user.role === "direttore_congressi" ||
+    user.role === "direzione" ||
     user.role === "sviluppatore" ||
     user.role === "reception";
   const canCall =
     (user.role === "direzione" ||
-      user.role === "direttore_congressi" ||
+      user.role === "direzione" ||
       user.role === "sviluppatore" ||
       user.role === "reception") &&
     needT;
   const canReqT =
     (user.role === "sviluppatore" ||
       user.role === "direzione" ||
-      user.role === "direttore_congressi" ||
+      user.role === "direzione" ||
       user.role === "reception") &&
     active;
   // Il manutentore non chiama piu' un tecnico direttamente: puo' chiedere a
@@ -6615,7 +6615,7 @@ function Detail({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            roles: ["reception", "direzione", "direttore_congressi"],
+            roles: ["reception", "direzione"],
             title: "🔔 Serve un tecnico",
             body:
               user.name +
@@ -6851,7 +6851,7 @@ function Detail({
   };
   const canEdit =
     user.role === "direzione" ||
-    user.role === "direttore_congressi" ||
+    user.role === "direzione" ||
     user.role === "sviluppatore" ||
     user.role === "reception" ||
     ((user.role === "governante" || user.role === "sviluppatore") &&
@@ -9094,27 +9094,18 @@ function AdminPanel({ adminPin, onSaveAdminPin, onSaveUsers, onBack }) {
                   ...Object.entries(ROLES).filter(
                     ([k]) => k !== "responsabile_area",
                   ),
-                  ["ristorante", { label: "Ristorante", icon: "wine" }],
-                  ["colazioni", { label: "Colazioni", icon: "coffee" }],
+                  ["golosi", { label: "Isola dei Golosi", icon: "coffee" }],
                 ].map(([k, r]) => {
                   const sel =
-                    k === "ristorante"
-                      ? areaSubtype === "ristorante"
-                      : k === "colazioni"
-                        ? areaSubtype === "colazioni"
-                        : newRole === k;
+                    k === "golosi" ? areaSubtype === "golosi" : newRole === k;
                   return (
                     <button
                       key={k}
                       onClick={() => {
-                        if (k === "ristorante") {
+                        if (k === "golosi") {
                           setNewRole("responsabile_area");
-                          setAreaSubtype("ristorante");
-                          setNewAreaZones("Risto Wine, Risto Jazz");
-                        } else if (k === "colazioni") {
-                          setNewRole("responsabile_area");
-                          setAreaSubtype("colazioni");
-                          setNewAreaZones("Sala Colazioni");
+                          setAreaSubtype("golosi");
+                          setNewAreaZones("Isola dei golosi");
                         } else {
                           setNewRole(k);
                           setAreaSubtype(null);
