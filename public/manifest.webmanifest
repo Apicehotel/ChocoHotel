@@ -1,11 +1,11 @@
 {
-  "name": "Manutenzione - HotelGio",
-  "short_name": "HotelGio",
+  "name": "Manutenzione - Chocohotel",
+  "short_name": "Chocohotel",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F4F2ED",
-  "theme_color": "#0E5C49",
+  "background_color": "#F7F0E3",
+  "theme_color": "#640A0A",
   "icons": [
     { "src": "/favicon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/apple-touch-icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
