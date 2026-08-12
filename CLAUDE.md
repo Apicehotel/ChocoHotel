@@ -52,3 +52,15 @@ URL produzione: https://apice-project.vercel.app
 ## Note
 - Login session e PIN admin restano in localStorage (locali al dispositivo).
 - Dati condivisi (segnalazioni, utenti, tecnici, interventi) vivono su Supabase.
+
+## Infrastruttura — piani a pagamento (dal 12/08/2026)
+- **Organizzazione Supabase "Apicehotel"**: piano **Pro** attivo (~$25/mese base +
+  ~$10/mese per ogni progetto oltre il primo — oggi 2 progetti, Hotel Giò +
+  Chocohotel). Sblocca: backup giornalieri automatici, niente pausa per
+  inattività, oltre il limite di 2 progetti del piano gratuito.
+- **Team Vercel "apicehotel"**: piano **Pro** attivo ($20/mese, un solo
+  abbonamento copre tutti i progetti del team). Sblocca: uso commerciale
+  regolare (Hobby lo vieta nei termini di servizio), 1TB banda/mese, deploy
+  protetti da password.
+- Tracciamento importi/date fatture: tool dedicato (registro-costi.html,
+  consegnato all'utente, salvato nel suo account Claude).
