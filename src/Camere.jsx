@@ -17,8 +17,8 @@ const RUOLI_CARICAMENTO = ["reception", "portiere_notturno", "sviluppatore"];
 // Ruoli che vedono la sezione "Modifica" dentro il foglio di una camera
 const RUOLI_MODIFICA = ["reception", "governante"];
 
-const STRUTTURE = ["Wine", "Jazz"];
-const PIANI_NUM = [1, 2, 3, 4];
+const STRUTTURE = ["Chocohotel"];
+const PIANI_NUM = [2, 3, 4];
 
 const SLOPE_LABELS = {
   b2b: "PART. + ARR.",
@@ -60,62 +60,22 @@ function lavoroDefault(statoSlope) {
 // ── Lookup camera → struttura/piano ufficiale, dal file zoneData.js ─────────
 // Usato sia per completare il tabellone con le camere non presenti nel file
 // caricato (restano "libera"), sia come riferimento in fase di parsing.
+// Chocohotel ha una sola struttura (non Wine/Jazz come Hotel Gio'), quindi
+// tutte le camere risultano sotto lo stesso nome.
 const CAMERA_STRUTTURA_PIANO = {};
 PIANI_ZONE.forEach((p) => {
-  const struttura = p.id.startsWith("jazz") ? "Jazz" : "Wine";
+  const struttura = "Chocohotel";
   const piano = Number(p.id.slice(-1));
   p.rooms.forEach((r) => {
     CAMERA_STRUTTURA_PIANO[r] = { struttura, piano };
   });
 });
 
-// Tipologia ufficiale delle 202 camere (struttura stabile dell'hotel, non
-// cambia col caricamento del file). Usata come fallback per le camere
-// assenti dal file di oggi, cosi' restano "libera" ma con la tipologia
-// comunque visibile in card invece che vuota.
-const BASE_TIPOLOGIA = {
-  101: "Tripla", 102: "Standard", 103: "Standard", 104: "Standard", 105: "Standard",
-  106: "Standard", 107: "Standard", 108: "Tripla", 109: "Standard", 110: "Tripla",
-  111: "Cantina", 112: "Cantina", 113: "Standard", 114: "Standard", 115: "Tripla",
-  116: "Quadrupla", 117: "Standard", 119: "Standard", 120: "Quadrupla", 121: "Economy",
-  122: "Economy", 123: "Quadrupla", 124: "Standard", 125: "Singola", 126: "Cantina",
-  127: "Cantina", 128: "Cantina", 129: "Cantina", 130: "Cantina", 131: "Cantina",
-  201: "Tripla", 202: "Standard", 203: "Standard", 204: "Standard", 205: "Standard",
-  206: "Quadrupla", 207: "Tripla", 208: "Tripla", 209: "Standard", 210: "Standard",
-  211: "Singola", 212: "Tripla", 213: "Standard", 214: "Standard", 216: "Standard",
-  217: "Economy", 218: "Singola", 219: "Economy", 220: "Economy", 221: "Singola",
-  222: "Economy", 223: "Standard", 224: "Singola", 225: "Cantina", 226: "Cantina",
-  227: "Cantina", 228: "Cantina", 229: "Cantina", 230: "Cantina", 231: "Cantina",
-  232: "Cantina", 233: "Cantina", 301: "Standard", 302: "Standard", 303: "Standard",
-  304: "Standard", 305: "Tripla", 306: "Standard", 307: "Tripla", 308: "Tripla",
-  309: "Standard", 310: "Standard", 311: "Standard", 312: "Singola", 313: "Tripla",
-  314: "Standard", 315: "Tripla", 317: "Standard", 318: "Quadrupla", 319: "Economy",
-  320: "Economy", 321: "Quadrupla", 322: "Standard", 323: "Singola", 324: "Cantina",
-  325: "Cantina", 326: "Cantina", 327: "Cantina", 328: "Cantina", 329: "Cantina",
-  330: "Cantina", 331: "Cantina", 332: "Cantina", 401: "Standard", 402: "Standard",
-  403: "Tripla", 404: "Standard", 405: "Tripla", 406: "Standard", 407: "Tripla",
-  408: "Standard", 409: "Standard", 410: "Standard", 411: "Standard", 412: "Singola",
-  413: "Tripla", 414: "Standard", 415: "Tripla", 417: "Standard", 418: "Economy",
-  419: "Singola", 420: "Economy", 421: "Economy", 422: "Singola", 423: "Economy",
-  424: "Standard", 425: "Singola", 426: "Cantina", 427: "Cantina", 428: "Cantina",
-  429: "Cantina", 430: "Cantina", 431: "Cantina", 432: "Cantina", 433: "Cantina",
-  434: "Cantina", 1101: "Superior", 1102: "Suite", 1103: "Superior", 1104: "Superior",
-  1105: "Superior", 1106: "Superior", 1107: "Superior", 1108: "Superior", 1109: "Superior",
-  1110: "Superior", 1111: "Superior", 1112: "Superior", 1114: "Superior", 1115: "Superior",
-  1116: "Superior", 1118: "Superior", 1119: "Superior", 1120: "Superior", 1121: "Superior",
-  2201: "Superior", 2202: "Suite", 2203: "Superior", 2204: "Superior", 2205: "Superior",
-  2206: "Superior", 2207: "Superior", 2208: "Superior", 2209: "Superior", 2210: "Superior",
-  2211: "Superior", 2212: "Superior", 2214: "Superior", 2215: "Superior", 2216: "Superior",
-  2218: "Superior", 2219: "Superior", 2220: "Superior", 2221: "Superior", 3301: "Superior",
-  3302: "Suite", 3303: "Superior", 3304: "Superior", 3305: "Superior", 3306: "Superior",
-  3307: "Superior", 3308: "Superior", 3309: "Superior", 3310: "Superior", 3311: "Superior",
-  3312: "Superior", 3314: "Superior", 3315: "Superior", 3316: "Superior", 3318: "Superior",
-  3319: "Superior", 3320: "Superior", 3321: "Superior", 4401: "Superior", 4402: "Suite",
-  4403: "Superior", 4404: "Superior", 4405: "Superior", 4406: "Superior", 4407: "Superior",
-  4408: "Superior", 4409: "Superior", 4410: "Superior", 4411: "Superior", 4412: "Superior",
-  4414: "Superior", 4415: "Superior", 4416: "Superior", 4418: "Superior", 4419: "Superior",
-  4420: "Superior", 4421: "Superior",
-};
+// Tipologia ufficiale delle camere: non ancora definita per Chocohotel
+// (mancano i dati veri) — tutte le camere partono come "Standard" finche'
+// non arrivano le tipologie reali da inserire qui, stesso formato di
+// Hotel Gio' (numero camera -> tipologia).
+const BASE_TIPOLOGIA = {};
 
 // Normalizza il testo tipologia grezzo del file Slope (che puo' essere
 // lungo/vario) in una categoria breve, cosi' entra nel badge della card.
@@ -141,15 +101,20 @@ const ORDINALI = { primo: 1, secondo: 2, terzo: 3, quarto: 4 };
 
 function pianoInterno(raw) {
   const norm = String(raw || "").toLowerCase();
-  let struttura = null;
-  if (norm.includes("jazz")) struttura = "Jazz";
-  else if (norm.includes("wine")) struttura = "Wine";
+  // Chocohotel ha una sola struttura: qualunque cosa dica la colonna
+  // "Piano" del file (es. "Secondo", "2 piano"...), la struttura e' sempre
+  // la stessa. Cerchiamo solo il numero del piano.
+  const struttura = "Chocohotel";
   let piano = null;
   for (const [k, v] of Object.entries(ORDINALI)) {
     if (norm.includes(k)) {
       piano = v;
       break;
     }
+  }
+  if (piano == null) {
+    const m = norm.match(/\d+/);
+    if (m) piano = parseInt(m[0], 10);
   }
   return { struttura, piano };
 }
@@ -203,8 +168,8 @@ export function elaboraRighe(rows) {
 
     const { struttura: strFile, piano: pianoFile } = pianoInterno(row[0]);
     const fallback = CAMERA_STRUTTURA_PIANO[camera] || {};
-    const struttura = strFile || fallback.struttura || "Wine";
-    const piano = pianoFile || fallback.piano || 1;
+    const struttura = strFile || fallback.struttura || "Chocohotel";
+    const piano = pianoFile || fallback.piano || 2;
     const tipologia = tipoBreve(String(row[1] ?? "").trim());
     const letti = String(row[7] ?? row[6] ?? "").trim();
     const note = String(row[8] ?? "").trim();
@@ -282,8 +247,8 @@ export default function Camere({ user, onFlash }) {
   const [giorno, setGiorno] = useState([]); // camere_giorno
   const [lavoro, setLavoro] = useState([]); // camere_lavoro
   const [loading, setLoading] = useState(true);
-  const [struttura, setStruttura] = useState("Wine");
-  const [piano, setPiano] = useState(1);
+  const [struttura, setStruttura] = useState("Chocohotel");
+  const [piano, setPiano] = useState(2);
   const [ordine, setOrdine] = useState("urgenti");
   const [aperta, setAperta] = useState(null); // camera selezionata (numero)
   const [uploading, setUploading] = useState(false);
