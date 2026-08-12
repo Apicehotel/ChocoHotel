@@ -2,13 +2,13 @@
 // Importa questo modulo nell'app e chiama enablePush(user) da un bottone.
 
 const VAPID_PUBLIC_KEY =
-  "BG14aL8DKKY-bNfg4TbtBhonzx3ithFHA38HXP7qISrYu2gnw5Rzwr1rV_GPLqVZtFowThX3TDSqaZ013KKq1UM";
+  "BJXvALpVtVoEJ4Kuc0AydxwS27BiC43JrMNY0eycS3Ih-75GPbVUfL5B5hs7jCRlWDaAkidMOndZUiZ0Norjxlk";
 
 // URL della Edge Function che salva l'iscrizione (Supabase)
 const SUBSCRIBE_URL =
-  "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/push-subscribe";
+  "https://ooqlfldcrnkudhgjnied.supabase.co/functions/v1/push-subscribe";
 // Chiave anon del progetto (la stessa gia' usata dall'app in db.js)
-const SUPABASE_ANON_KEY = "sb_publishable_XTYCLV5jSdk3ztG7PNuL_Q_1zu3tDwJ";
+const SUPABASE_ANON_KEY = "sb_publishable_Oiu7IOhuUd6YPEDmmSa7zA_ngNuiSlX";
 
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);

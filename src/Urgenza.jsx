@@ -802,8 +802,8 @@ export function GpsSuggestionPopup({ onConfirm, onDismiss }) {
 //   riaccende in silenzio: chiama onSuggestCheckin (una volta per sessione)
 //   cosi' l'app puo' mostrare il popup di conferma — pensato apposta per
 //   chi si dimentica di premere il pulsante da solo.
-const HOTEL_LAT = 43.1125739;
-const HOTEL_LNG = 12.3773999;
+const HOTEL_LAT = 43.0992677;
+const HOTEL_LNG = 12.3847294;
 const RAGGIO_METRI = 200;
 
 function distanzaMetri(lat1, lng1, lat2, lng2) {

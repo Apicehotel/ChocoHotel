@@ -1845,7 +1845,7 @@ export default function App() {
     await refreshUrgenze();
     try {
       await fetch(
-        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-push",
+        "https://ooqlfldcrnkudhgjnied.supabase.co/functions/v1/send-push",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -6610,7 +6610,7 @@ function Detail({
         tecnicoAskedAt: Date.now(),
       });
       await fetch(
-        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/send-push",
+        "https://ooqlfldcrnkudhgjnied.supabase.co/functions/v1/send-push",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -10437,7 +10437,7 @@ function SensoriTemperatura({ onClose }) {
     setSyncing(true);
     try {
       await fetch(
-        "https://jmhzmwyolxzacjunfwcq.supabase.co/functions/v1/sync-sensori-temperatura",
+        "https://ooqlfldcrnkudhgjnied.supabase.co/functions/v1/sync-sensori-temperatura",
         { method: "POST" },
       );
     } catch {}
