@@ -598,26 +598,16 @@ function roleDisplayFor(role, zones) {
     return { label: "Colazioni", icon: "coffee" };
   return { label: "Area", icon: "list" };
 }
-const DEF_TEC = [
-  { id: "t1", nome: "Pecetti", telefono: "3341196935" },
-  { id: "t2", nome: "Ciuffini", telefono: "3341196935" },
-  { id: "t3", nome: "AIT", telefono: "3341196935" },
-];
-const DEF_USERS = [
-  { id: "d1", name: "Alberto", role: "direzione", pin: "0000" },
-  { id: "d3", name: "Michele", role: "direzione", pin: "0000" },
-  { id: "d4", name: "Giovanna", role: "direzione", pin: "0000" },
-  { id: "u1", name: "Domenico", role: "manutentore", pin: "0000" },
-  { id: "u2", name: "Mario", role: "manutentore", pin: "0000" },
-  { id: "u3", name: "Aly", role: "manutentore", pin: "0000" },
-  { id: "u4", name: "Gianluca", role: "manutentore", pin: "0000" },
-  { id: "u5", name: "Patricio", role: "manutentore", pin: "0000" },
-  { id: "g1", name: "Giulia", role: "governante", pin: "0000" },
-  { id: "r1", name: "Reception", role: "reception", pin: "0000" },
-  { id: "pn1", name: "Michele C.", role: "portiere_notturno", pin: "0000" },
-  { id: "pn2", name: "Marco", role: "portiere_notturno", pin: "0000" },
-  { id: "pn3", name: "Amin", role: "portiere_notturno", pin: "0000" },
-];
+// Dichiarato ma non piu' usato nel codice (verificato) — svuotato comunque
+// per non portarsi dietro i contatti dei tecnici di Hotel Giò dentro il
+// pacchetto di Chocohotel, che sono dati reali di un'altra struttura.
+const DEF_TEC = [];
+// Elenco utenti "di esempio" per il pulsante "Sincronizza utenti di
+// default" nel pannello admin — volutamente vuoto per Chocohotel: quelli
+// di Hotel Giò (Alberto, Domenico, ecc.) non sono reali qui. Gli utenti
+// veri (Simona, Mauro, Fabio, ecc.) vivono solo nel database, si
+// aggiungono a mano dal pannello admin.
+const DEF_USERS = [];
 const ADMIN_PIN_DEFAULT = "0000";
 
 const ST = {
