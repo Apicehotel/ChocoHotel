@@ -711,6 +711,27 @@ export const DB = {
     }
     return { ok: true, id: data };
   },
+
+  // ── PIN admin ────────────────────────────────────────────────────────────
+  // Vive nel database (app_config), non piu' solo nella memoria del
+  // telefono: cosi' e' resettabile da remoto se qualcuno lo dimentica,
+  // senza dover toccare il dispositivo.
+  async getAdminPin() {
+    const { data, error } = await supabase
+      .from("app_config")
+      .select("value")
+      .eq("key", "admin_pin")
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.value;
+  },
+  async setAdminPin(pin) {
+    const { error } = await supabase
+      .from("app_config")
+      .upsert({ key: "admin_pin", value: pin });
+    if (error) console.error(error);
+    return !error;
+  },
 };
 
 // UID per nuovi record (Supabase genera comunque il suo, ma serve per la UI)

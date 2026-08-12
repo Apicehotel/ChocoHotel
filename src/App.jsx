@@ -8206,6 +8206,22 @@ function Login({ onLogin }) {
   const [sugg, setSugg] = useState([]);
   useEffect(() => {
     DB.loadUsers().then((u) => setUsers(u.length ? u : []));
+    // PIN admin: dal 12/08/2026 vive nel database (app_config), non piu'
+    // solo sul telefono, cosi' e' resettabile da remoto se dimenticato.
+    // Migrazione sicura al primo avvio: se il database non ha ancora un
+    // valore, prendiamo quello GIA' IN USO sul telefono (potrebbe essere
+    // stato cambiato in passato, non e' detto sia ancora "0000") e lo
+    // carichiamo li' - MAI il contrario, altrimenti rischieremmo di
+    // sovrascrivere un PIN vero con un valore non aggiornato.
+    DB.getAdminPin().then((p) => {
+      if (p) {
+        setAdminPin(p);
+        ST.set("adminpin", p);
+      } else {
+        DB.setAdminPin(adminPin);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const onName = (v) => {
     setName(v);
@@ -8450,6 +8466,7 @@ function Login({ onLogin }) {
         onSaveAdminPin={(p) => {
           setAdminPin(p);
           ST.set("adminpin", p);
+          DB.setAdminPin(p);
         }}
         onSaveUsers={(u) => {
           // AdminPanel ha gia' scritto sul database (in modo mirato per
