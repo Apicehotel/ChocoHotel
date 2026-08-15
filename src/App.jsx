@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { DB, supabase, newId } from "./db.js";
 import { resolveCamera, ZONE_NAMES, ROOM_NUMBERS, PIANI } from "./zoneData.js";
 import NotificheSettings, { playNotifSound } from "./NotificheSettings";
@@ -9999,10 +9998,9 @@ function MyWorkPage({ user, items, planned, onClose, onOpen }) {
 // Client Supabase in sola lettura per Hotel Gio', usato solo qui per
 // mostrare i suoi consumi accanto a quelli di Chocohotel in un unico posto.
 // Chiave pubblica (publishable), la stessa gia' usata dall'app Hotel Gio'.
-const hotelGioSupabase = createClient(
-  "https://jmhzmwyolxzacjunfwcq.supabase.co",
-  "sb_publishable_XTYCLV5jSdk3ztG7PNuL_Q_1zu3tDwJ",
-);
+// Pannello Consumi dismesso insieme al resto: riusa il client finto di db.js
+// invece di connettersi davvero (l'app Chocohotel separata non è più operativa).
+const hotelGioSupabase = supabase;
 
 const LIMITI_FREE = {
   db: 500 * 1024 * 1024, // 500 MB

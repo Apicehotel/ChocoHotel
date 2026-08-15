@@ -1,9 +1,61 @@
-import { createClient } from "@supabase/supabase-js";
+// ── Supabase scollegato ──────────────────────────────────────────────────────
+// Chocohotel come app separata è stata dismessa (sostituita dall'app
+// unificata Apicehotel-Manutenzione). Il progetto Supabase dedicato è stato
+// cancellato per non pagarne il costo. Per far sì che l'app resti comunque
+// APRIBILE senza andare in crash, il vero client Supabase è sostituito da uno
+// "finto" che risponde sempre a vuoto (nessun dato, nessun errore). L'app si
+// apre pulita ma non è operativa: login, segnalazioni, camere ecc. non
+// salvano/leggono nulla. Un banner in-app avvisa che è una versione dismessa.
+// Per riattivarla in futuro: ricreare un progetto Supabase e ripristinare
+// createClient con URL e chiave veri (backup dati: backup-chocohotel-supabase).
+const SUPABASE_DISMESSO = true;
 
-const SUPABASE_URL = "https://ooqlfldcrnkudhgjnied.supabase.co";
-const SUPABASE_KEY = "sb_publishable_Oiu7IOhuUd6YPEDmmSa7zA_ngNuiSlX";
+function makeMockQuery() {
+  // Ogni metodo restituisce se stesso (per il concatenamento tipo
+  // .from().select().eq()...) e la catena è "thenable": await dà {data:[],error:null}.
+  const result = { data: [], error: null, count: 0, status: 200, statusText: "OK" };
+  const handler = {
+    get(target, prop) {
+      if (prop === "then") {
+        // rende l'oggetto await-abile senza essere una vera Promise
+        return (resolve) => resolve(result);
+      }
+      if (prop === "single" || prop === "maybeSingle") {
+        return () => Promise.resolve({ data: null, error: null });
+      }
+      // qualunque altro metodo (.select .insert .update .eq .order ...) torna la catena
+      return () => proxy;
+    },
+  };
+  const proxy = new Proxy(function () {}, handler);
+  return proxy;
+}
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const mockChannel = {
+  on() { return this; },
+  subscribe() { return this; },
+  unsubscribe() { return Promise.resolve("ok"); },
+};
+
+// Client finto: stessa "forma" del vero (from, rpc, channel, auth, storage),
+// ma non fa nulla e non lancia errori.
+export const supabase = SUPABASE_DISMESSO
+  ? {
+      from: () => makeMockQuery(),
+      rpc: () => Promise.resolve({ data: null, error: null }),
+      channel: () => mockChannel,
+      removeChannel: () => {},
+      auth: {
+        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+        signInWithPassword: () => Promise.resolve({ data: { user: null, session: null }, error: null }),
+        signOut: () => Promise.resolve({ error: null }),
+        onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }),
+      },
+      storage: { from: () => ({ upload: () => Promise.resolve({ data: null, error: null }), getPublicUrl: () => ({ data: { publicUrl: "" } }) }) },
+    }
+  : createClient("https://ooqlfldcrnkudhgjnied.supabase.co", "sb_publishable_Oiu7IOhuUd6YPEDmmSa7zA_ngNuiSlX");
+
 
 // ── Coda locale per salvataggi falliti (segnalazioni) ────────────────────────
 // Se il salvataggio su Supabase fallisce (rete assente, errore server, bug
